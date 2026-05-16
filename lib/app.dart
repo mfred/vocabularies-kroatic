@@ -116,27 +116,79 @@ class _LessonOverview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (lessons.isEmpty) {
-      return const Center(child: Text('Keine Lektionen vorhanden.'));
-    }
     final totalItems = lessons.fold<int>(
       0,
-      (sum, l) => sum + (l.wordCount + l.phraseCount + l.sentenceCount) as int,
+      (sum, l) =>
+          sum + ((l.wordCount + l.phraseCount + l.sentenceCount) as int),
     );
     return CustomScrollView(
       slivers: [
         SliverToBoxAdapter(
           child: _SyncBanner(syncResult: syncResult, totalItems: totalItems),
         ),
-        SliverList.builder(
-          itemCount: lessons.length,
-          itemBuilder: (context, index) {
-            final lesson = lessons[index];
-            return _LessonTile(lesson: lesson);
-          },
-        ),
+        if (lessons.isEmpty)
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: _EmptyState(syncResult: syncResult),
+          )
+        else
+          SliverList.builder(
+            itemCount: lessons.length,
+            itemBuilder: (context, index) {
+              final lesson = lessons[index];
+              return _LessonTile(lesson: lesson);
+            },
+          ),
         const SliverToBoxAdapter(child: SizedBox(height: 24)),
       ],
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.syncResult});
+
+  final dynamic syncResult;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final error = syncResult?.error as String?;
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(
+            error == null ? Icons.inbox_outlined : Icons.cloud_off,
+            size: 56,
+            color: theme.colorScheme.outline,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            error == null
+                ? 'Noch keine Lektionen geladen'
+                : 'Daten konnten nicht geladen werden',
+            style: theme.textTheme.titleMedium,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          if (error != null) ...[
+            Text(
+              error,
+              style: theme.textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+          ],
+          Text(
+            'Status oben prüfen, dann Refresh-Knopf in der Titelzeile.',
+            style: theme.textTheme.bodySmall,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 }
