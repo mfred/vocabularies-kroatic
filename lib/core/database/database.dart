@@ -91,6 +91,15 @@ class AppDatabase extends _$AppDatabase {
       await batch((b) => b.insertAll(items, newItems));
     });
   }
+
+  Future<List<Item>> itemsForLesson(String lessonId) {
+    return (select(items)
+          ..where((t) => t.lessonId.equals(lessonId))
+          ..orderBy([
+            (t) => OrderingTerm(expression: t.id),
+          ]))
+        .get();
+  }
 }
 
 QueryExecutor _openConnection() {

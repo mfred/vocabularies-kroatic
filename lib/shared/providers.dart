@@ -22,3 +22,8 @@ final cachedLessonsProvider = FutureProvider<List<LessonsCacheData>>((ref) async
   await ref.watch(syncResultProvider.future);
   return ref.watch(databaseProvider).allLessonsByOrder();
 });
+
+final lessonItemsProvider =
+    FutureProvider.family<List<Item>, String>((ref, lessonId) async {
+  return ref.watch(databaseProvider).itemsForLesson(lessonId);
+});

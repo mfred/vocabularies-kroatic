@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/database/database.dart';
+import 'features/lessons/lesson_detail_screen.dart';
 import 'shared/providers.dart';
 
 const Map<String, IconData> _topicIcons = {
@@ -325,12 +327,12 @@ class _SyncBannerState extends State<_SyncBanner> {
 class _TopicCard extends StatelessWidget {
   const _TopicCard({required this.lesson});
 
-  final dynamic lesson;
+  final LessonsCacheData lesson;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final icon = _iconFor(lesson.lessonId as String);
+    final icon = _iconFor(lesson.lessonId);
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 12),
@@ -343,7 +345,13 @@ class _TopicCard extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: null,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => LessonDetailScreen(lesson: lesson),
+            ),
+          );
+        },
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -353,11 +361,15 @@ class _TopicCard extends StatelessWidget {
               const SizedBox(width: 20),
               Expanded(
                 child: Text(
-                  lesson.titleDe as String,
+                  lesson.titleDe,
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
+              ),
+              Icon(
+                Icons.chevron_right,
+                color: theme.colorScheme.outline,
               ),
             ],
           ),
