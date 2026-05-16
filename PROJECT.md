@@ -194,7 +194,7 @@ automatisch der Repo-Lizenz **CC-BY 4.0**.
 Die Daten liegen in einem **separaten GitHub-Repo**:
 
 ```
-https://github.com/<owner>/vocabularies-kroatic-data
+https://github.com/mfred/vocabularies-kroatic-data
 ```
 
 **Begründung der Repo-Trennung:**
@@ -209,7 +209,7 @@ https://github.com/<owner>/vocabularies-kroatic-data
 Die App lädt zur Laufzeit:
 
 ```
-https://raw.githubusercontent.com/<owner>/vocabularies-kroatic-data/main/v1/manifest.json
+https://raw.githubusercontent.com/mfred/vocabularies-kroatic-data/main/v1/manifest.json
 ```
 
 und folgt von dort auf die einzelnen Lektionsdateien (siehe §4.5).
@@ -252,7 +252,7 @@ auf `v2/`, ohne Alt-Clients zu beschädigen — die Alt-Daten bleiben unter
   "schemaVersion": "1.0.0",
   "dataVersion":   "2026-05-16",
   "generatedAt":   "2026-05-16T00:00:00Z",
-  "baseUrl":       "https://raw.githubusercontent.com/<owner>/vocabularies-kroatic-data/main/v1/",
+  "baseUrl":       "https://raw.githubusercontent.com/mfred/vocabularies-kroatic-data/main/v1/",
   "languages":     { "source": "de-DE", "target": "hr-HR" },
   "lessons": [
     {
@@ -816,5 +816,5 @@ flutter build apk --release
 ### 13.3 Daten-Repo
 
 Das separate Daten-Repository mit den Vokabel-JSONs:
-[`vocabularies-kroatic-data`](https://github.com/<owner>/vocabularies-kroatic-data)
+[`vocabularies-kroatic-data`](https://github.com/mfred/vocabularies-kroatic-data)
 (lokal: `/home/user/projects/vocabularies-kroatic-data/`).

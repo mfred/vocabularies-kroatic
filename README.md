@@ -28,7 +28,7 @@ Vokabeln liegen in einem separaten Repo, damit Inhaltsupdates kein
 App-Update erfordern:
 
 ```
-https://github.com/<owner>/vocabularies-kroatic-data
+https://github.com/mfred/vocabularies-kroatic-data
 ```
 
 Lokal: `../vocabularies-kroatic-data/`

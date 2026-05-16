@@ -52,7 +52,7 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 - **App-Versionen** folgen Semantic Versioning (`MAJOR.MINOR.PATCH`).
 - **Daten-Versionen** werden im separaten Repo
-  [`vocabularies-kroatic-data`](https://github.com/<owner>/vocabularies-kroatic-data)
+  [`vocabularies-kroatic-data`](https://github.com/mfred/vocabularies-kroatic-data)
   gepflegt — siehe dortige `CHANGELOG.md` für Inhaltsänderungen.
 - Schema-Änderungen am Datenformat werden hier als App-Patch dokumentiert,
   Inhalts-Änderungen dort.
