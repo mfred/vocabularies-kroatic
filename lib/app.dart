@@ -1,7 +1,23 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'shared/providers.dart';
+
+const Map<String, IconData> _topicIcons = {
+  'greetings': Icons.waving_hand,
+  'introduction': Icons.person_outline,
+  'numbers-time': Icons.schedule,
+  'family': Icons.diversity_3,
+  'shopping': Icons.shopping_basket_outlined,
+  'restaurant': Icons.restaurant,
+  'traffic': Icons.directions_bus_filled_outlined,
+  'tourism': Icons.beach_access,
+};
+
+IconData _iconFor(String lessonId) =>
+    _topicIcons[lessonId] ?? Icons.menu_book_outlined;
 
 class VocabulariesApp extends StatelessWidget {
   const VocabulariesApp({super.key});
@@ -9,7 +25,7 @@ class VocabulariesApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Vokabeltrainer DE↔HR',
+      title: 'Vokabeltrainer',
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: const Color(0xFF1565C0),
@@ -29,14 +45,20 @@ class SyncStatusScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Vokabeltrainer DE ↔ HR'),
+        titleSpacing: 16,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Text('Vokabeltrainer'),
+            SizedBox(width: 10),
+            Text('🇩🇪 → 🇭🇷', style: TextStyle(fontSize: 20)),
+          ],
+        ),
         actions: [
           IconButton(
             tooltip: 'Erneut synchronisieren',
             icon: const Icon(Icons.refresh),
-            onPressed: () {
-              ref.invalidate(syncResultProvider);
-            },
+            onPressed: () => ref.invalidate(syncResultProvider),
           ),
         ],
       ),
@@ -132,12 +154,13 @@ class _LessonOverview extends StatelessWidget {
             child: _EmptyState(syncResult: syncResult),
           )
         else
-          SliverList.builder(
-            itemCount: lessons.length,
-            itemBuilder: (context, index) {
-              final lesson = lessons[index];
-              return _LessonTile(lesson: lesson);
-            },
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            sliver: SliverList.builder(
+              itemCount: lessons.length,
+              itemBuilder: (context, index) =>
+                  _TopicCard(lesson: lessons[index]),
+            ),
           ),
         const SliverToBoxAdapter(child: SizedBox(height: 24)),
       ],
@@ -193,17 +216,65 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-class _SyncBanner extends StatelessWidget {
+class _SyncBanner extends StatefulWidget {
   const _SyncBanner({required this.syncResult, required this.totalItems});
 
   final dynamic syncResult;
   final int totalItems;
 
   @override
+  State<_SyncBanner> createState() => _SyncBannerState();
+}
+
+class _SyncBannerState extends State<_SyncBanner> {
+  bool _hidden = false;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleHide();
+  }
+
+  @override
+  void didUpdateWidget(covariant _SyncBanner oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.syncResult != widget.syncResult) {
+      setState(() => _hidden = false);
+      _scheduleHide();
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _scheduleHide() {
+    _timer?.cancel();
+    final hasError = widget.syncResult?.error != null;
+    final isFromCache = widget.syncResult?.fromCache == true;
+    if (hasError || isFromCache) return;
+    _timer = Timer(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _hidden = true);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+      alignment: Alignment.topCenter,
+      child: _hidden ? const SizedBox.shrink() : _buildBanner(context),
+    );
+  }
+
+  Widget _buildBanner(BuildContext context) {
     final theme = Theme.of(context);
-    final isFromCache = syncResult?.fromCache == true;
-    final hasError = syncResult?.error != null;
+    final isFromCache = widget.syncResult?.fromCache == true;
+    final hasError = widget.syncResult?.error != null;
     final color = hasError
         ? theme.colorScheme.errorContainer
         : isFromCache
@@ -237,14 +308,12 @@ class _SyncBanner extends StatelessWidget {
                 color: fg,
               ),
               const SizedBox(width: 8),
-              Expanded(
-                child: Text(label, style: TextStyle(color: fg)),
-              ),
+              Expanded(child: Text(label, style: TextStyle(color: fg))),
             ],
           ),
           const SizedBox(height: 8),
           Text(
-            '$totalItems Vokabeln in ${syncResult?.lessonsTotal ?? 0} Lektionen',
+            '${widget.totalItems} Vokabeln in ${widget.syncResult?.lessonsTotal ?? 0} Lektionen',
             style: theme.textTheme.titleMedium?.copyWith(color: fg),
           ),
         ],
@@ -253,38 +322,47 @@ class _SyncBanner extends StatelessWidget {
   }
 }
 
-class _LessonTile extends StatelessWidget {
-  const _LessonTile({required this.lesson});
+class _TopicCard extends StatelessWidget {
+  const _TopicCard({required this.lesson});
 
   final dynamic lesson;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final total = lesson.wordCount + lesson.phraseCount + lesson.sentenceCount;
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: theme.colorScheme.secondaryContainer,
-        foregroundColor: theme.colorScheme.onSecondaryContainer,
-        child: Text('${lesson.orderIndex}'),
+    final icon = _iconFor(lesson.lessonId as String);
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          width: 1.5,
+          color: theme.colorScheme.outlineVariant,
+        ),
       ),
-      title: Text(lesson.titleDe),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(lesson.titleHr,
-              style: theme.textTheme.bodySmall?.copyWith(
-                fontStyle: FontStyle.italic,
-              )),
-          const SizedBox(height: 4),
-          Text(
-            '$total Items  •  ${lesson.wordCount}W / ${lesson.phraseCount}P / ${lesson.sentenceCount}S  •  Diff ${lesson.difficulty}',
-            style: theme.textTheme.bodySmall,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: null,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Row(
+            children: [
+              Icon(icon, size: 44, color: theme.colorScheme.primary),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Text(
+                  lesson.titleDe as String,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
-      trailing: Text('v${lesson.version}',
-          style: theme.textTheme.bodySmall),
     );
   }
 }
