@@ -54,7 +54,16 @@ class AttemptRow extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              if (attempt.hintUsed)
+              if (attempt.jokers.isNotEmpty)
+                for (final j in attempt.jokers)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: Tooltip(
+                      message: j.label,
+                      child: Icon(j.icon, size: 16, color: scheme.tertiary),
+                    ),
+                  )
+              else if (attempt.hintUsed)
                 Padding(
                   padding: const EdgeInsets.only(right: 6),
                   child: Icon(
@@ -63,6 +72,7 @@ class AttemptRow extends StatelessWidget {
                     color: scheme.tertiary,
                   ),
                 ),
+              const SizedBox(width: 4),
               Text(
                 '$secs s',
                 style: theme.textTheme.bodySmall?.copyWith(

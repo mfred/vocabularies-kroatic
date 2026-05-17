@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import '../../../core/database/database.dart';
+import '../../quiz/models/joker_type.dart';
 import '../../quiz/models/quiz_direction.dart';
 import '../models/session_detail.dart';
 
@@ -19,6 +22,7 @@ class SessionDetailService {
               questionOrder: r.attempt.questionOrder,
               wasCorrect: r.attempt.wasCorrect,
               hintUsed: r.attempt.hintUsed,
+              jokers: _decodeJokers(r.attempt.jokersJson),
               responseMs: r.attempt.responseMs,
               pickedOption: r.attempt.pickedOption,
               itemId: r.attempt.itemId,
@@ -43,6 +47,19 @@ class SessionDetailService {
       scorePoints: session.scorePoints,
       attempts: attempts,
     );
+  }
+
+  List<JokerType> _decodeJokers(String? jokersJson) {
+    if (jokersJson == null || jokersJson.isEmpty) return const [];
+    try {
+      final list = jsonDecode(jokersJson) as List;
+      return list
+          .map((e) => JokerType.fromCode(e as String))
+          .whereType<JokerType>()
+          .toList();
+    } catch (_) {
+      return const [];
+    }
   }
 
   QuizDirection? _directionFromMode(String mode) {

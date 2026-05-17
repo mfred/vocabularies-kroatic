@@ -7,6 +7,30 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Added — Iteration 10 (Joker-System)
+- **Drei Joker-Typen** ersetzen den bisherigen generischen Hinweis:
+  - **Lautschrift (🔤)** — zeigt das IPA der Antwort, Strafe −5 P.
+    Disabled wenn das Item kein IPA hat.
+  - **50/50 (✂)** — dimmt zwei falsche Optionen visuell + macht sie
+    untappbar, Strafe −15 P. Nur im Auswählen-Modus aktiv. Auswahl
+    deterministisch aus `sessionId ⊕ questionOrder`.
+  - **Bild (🖼)** — blendet ein zur Vokabel passendes Material-Icon
+    ein, Strafe −5 P. ~60 Mappings in `VocabIcons` (Farben, Tiere,
+    Verkehr, Möbel, Essen).
+- **JokerBar** ersetzt das alte `quiz_hint_panel.dart`: drei kompakte
+  Joker-Buttons nebeneinander, jeder mit Icon, Label, Strafe und
+  Tooltip. Reveal-Cards für IPA/Bild klappen darunter aus; mehrere
+  Joker auf derselben Frage erlaubt.
+- `computeScore` neu mit `jokerCost`-Parameter; ScoreExplanationDialog
+  zeigt die drei Strafen aufgelistet + Beispielrechnung.
+- **DB-Schema v4**: `quiz_attempts.jokersJson` (Text, nullable, JSON-
+  Liste der Joker-Codes pro Versuch). Migration v3→v4 ist additiv.
+- Session-Detail-Screen zeigt pro Versuch die Joker-Icons; alte
+  Versuche mit `hintUsed=true` ohne `jokersJson` zeigen das generische
+  💡 (Backward-Compat).
+- Unit-Tests `test/joker_score_test.dart`: 4 Cases für `computeScore`
+  + 5 Cases für `jokerAvailable`. Gesamt 22 Tests grün.
+
 ### Added — Iteration 9 („Sprache installieren"-Deep-Link)
 - Tap auf einen disabled-Lautsprecher-Button öffnet jetzt einen
   `MissingLanguageDialog` mit Erklärung + Buttons „Sprachdienste

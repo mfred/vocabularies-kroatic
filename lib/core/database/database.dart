@@ -86,6 +86,7 @@ class QuizAttempts extends Table {
   BoolColumn get hintUsed => boolean().withDefault(const Constant(false))();
   IntColumn get responseMs => integer()();
   TextColumn get pickedOption => text().nullable()();
+  TextColumn get jokersJson => text().nullable()();
   IntColumn get answeredAt => integer()();
 
   @override
@@ -97,7 +98,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -116,6 +117,9 @@ class AppDatabase extends _$AppDatabase {
               "CASE WHEN mode LIKE '%_hr_de' THEN 'hr_de' "
               "ELSE 'de_hr' END",
             );
+          }
+          if (from < 4) {
+            await m.addColumn(quizAttempts, quizAttempts.jokersJson);
           }
         },
       );

@@ -1,3 +1,4 @@
+import '../../quiz/models/joker_type.dart';
 import '../../quiz/models/quiz_direction.dart';
 
 class AttemptDetail {
@@ -5,6 +6,7 @@ class AttemptDetail {
     required this.questionOrder,
     required this.wasCorrect,
     required this.hintUsed,
+    required this.jokers,
     required this.responseMs,
     required this.pickedOption,
     required this.itemId,
@@ -15,6 +17,7 @@ class AttemptDetail {
   final int questionOrder;
   final bool wasCorrect;
   final bool hintUsed;
+  final List<JokerType> jokers;
   final int responseMs;
   final String? pickedOption;
   final String itemId;

@@ -6,10 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/widgets/speak_button.dart';
 import '../../../shared/providers.dart';
 import '../controllers/quiz_session_controller.dart';
+import '../models/joker_type.dart';
 import '../models/quiz_direction.dart';
 import '../models/quiz_format.dart';
 import '../models/quiz_question.dart';
-import '../widgets/quiz_hint_panel.dart';
+import '../widgets/joker_bar.dart';
 import '../widgets/quiz_mic_input.dart';
 import '../widgets/quiz_option_button.dart';
 import '../widgets/quiz_progress_bar.dart';
@@ -79,11 +80,11 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
             correctCount: state.correctCount,
             totalCount: state.totalQuestions,
             durationSeconds: state.elapsedSeconds,
-            hintsUsed: state.hintsUsed,
+            hintsUsed: state.jokersUsedTotal,
             score: computeScore(
               correctCount: state.correctCount,
               durationSeconds: state.elapsedSeconds,
-              hintsUsed: state.hintsUsed,
+              jokerCost: state.jokerCostTotal,
             ),
             onRetry: () {
               _advanceTimer?.cancel();
@@ -200,15 +201,14 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
               if (state.isAnswered)
                 _AnswerFeedback(state: state, question: question),
               const Spacer(),
-              QuizHintPanel(
-                hint: question.hint,
-                isNew: question.isNewWord,
-                revealed: state.hintRevealed,
-                onReveal: state.isAnswered
-                    ? null
-                    : () => ref
-                        .read(quizSessionControllerProvider(_args).notifier)
-                        .revealHint(),
+              JokerBar(
+                question: question,
+                format: widget.format,
+                usedJokers: state.usedJokersThisQuestion,
+                isAnswered: state.isAnswered,
+                onUseJoker: (j) => ref
+                    .read(quizSessionControllerProvider(_args).notifier)
+                    .useJoker(j),
               ),
               const SizedBox(height: 12),
               if (state.isAnswered && state.wasLastCorrect == false)
@@ -233,17 +233,20 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
         return Column(
           children: [
             for (final opt in question.options)
-              QuizOptionButton(
-                label: opt,
-                state: _optionStateFor(
+              Builder(builder: (_) {
+                final optState = _optionStateFor(
                   option: opt,
                   question: question,
                   state: state,
-                ),
-                onTap: state.isAnswered
-                    ? null
-                    : () => _handleAnswer(opt, state),
-              ),
+                );
+                final disabled = state.isAnswered ||
+                    optState == QuizOptionState.dimmed;
+                return QuizOptionButton(
+                  label: opt,
+                  state: optState,
+                  onTap: disabled ? null : () => _handleAnswer(opt, state),
+                );
+              }),
           ],
         );
       case QuizFormat.type:
@@ -279,10 +282,20 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
 
   QuizOptionState _optionStateFor({
     required String option,
-    required dynamic question,
+    required QuizQuestion question,
     required QuizSessionState state,
   }) {
-    if (!state.isAnswered) return QuizOptionState.neutral;
+    if (!state.isAnswered) {
+      if (state.usedJokersThisQuestion.contains(JokerType.fiftyFifty)) {
+        final dimmed = fiftyFiftyDimmed(
+          question: question,
+          sessionId: state.sessionId,
+          questionOrder: state.currentIndex,
+        );
+        if (dimmed.contains(option)) return QuizOptionState.dimmed;
+      }
+      return QuizOptionState.neutral;
+    }
     if (option == question.correct) return QuizOptionState.correct;
     if (option == state.lockedAnswer) return QuizOptionState.wrong;
     return QuizOptionState.dimmed;

@@ -11,7 +11,7 @@ Future<void> showScoreExplanationDialog(BuildContext context) {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Punkte = Treffer × 100  +  Zeit-Bonus  −  Hinweise × 5',
+              'Punkte = Treffer × 100  +  Zeit-Bonus  −  Joker-Strafen',
               style: theme.textTheme.bodyMedium?.copyWith(
                 fontFamily: 'monospace',
                 fontWeight: FontWeight.w600,
@@ -28,7 +28,9 @@ Future<void> showScoreExplanationDialog(BuildContext context) {
                   '0 s → +600, 1 min → +540, 5 min → +300, '
                   '10 min und mehr → 0.',
             ),
-            const _Bullet(text: '−5 Punkte pro aufgedecktem Hinweis.'),
+            const _Bullet(text: 'Lautschrift-Joker: −5 P pro Nutzung.'),
+            const _Bullet(text: '50/50-Joker: −15 P pro Nutzung.'),
+            const _Bullet(text: 'Bild-Joker: −5 P pro Nutzung.'),
             const _Bullet(text: 'Negative Summen werden auf 0 gesetzt.'),
             const SizedBox(height: 14),
             Container(
@@ -39,8 +41,8 @@ Future<void> showScoreExplanationDialog(BuildContext context) {
               ),
               child: Text(
                 'Beispiel\n'
-                '8 richtig in 4:12 mit 2 Hinweisen\n'
-                '→ 800 + (600 − 252) − 10 = 1 138 P',
+                '8 richtig in 4:12 mit 2× IPA + 1× 50/50\n'
+                '→ 800 + (600 − 252) − (2·5 + 15) = 1 123 P',
                 style: theme.textTheme.bodySmall,
               ),
             ),

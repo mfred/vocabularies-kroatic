@@ -4,8 +4,11 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import 'dart:convert';
+
 import '../../../core/database/database.dart';
 import '../../../shared/providers.dart';
+import '../models/joker_type.dart';
 import '../models/quiz_direction.dart';
 import '../models/quiz_format.dart';
 import '../models/quiz_question.dart';
@@ -43,11 +46,12 @@ class QuizSessionState {
     required this.questions,
     required this.currentIndex,
     required this.correctCount,
-    required this.hintsUsed,
+    required this.jokersUsedTotal,
+    required this.jokerCostTotal,
+    required this.usedJokersThisQuestion,
     required this.lockedAnswer,
     required this.wasLastCorrect,
     required this.spellingNotice,
-    required this.hintRevealed,
     required this.startedAt,
     required this.elapsedSeconds,
     required this.isFinished,
@@ -57,11 +61,12 @@ class QuizSessionState {
   final List<QuizQuestion> questions;
   final int currentIndex;
   final int correctCount;
-  final int hintsUsed;
+  final int jokersUsedTotal;
+  final int jokerCostTotal;
+  final Set<JokerType> usedJokersThisQuestion;
   final String? lockedAnswer;
   final bool? wasLastCorrect;
   final String? spellingNotice;
-  final bool hintRevealed;
   final int startedAt;
   final int elapsedSeconds;
   final bool isFinished;
@@ -77,14 +82,15 @@ class QuizSessionState {
   QuizSessionState copyWith({
     int? currentIndex,
     int? correctCount,
-    int? hintsUsed,
+    int? jokersUsedTotal,
+    int? jokerCostTotal,
+    Set<JokerType>? usedJokersThisQuestion,
     String? lockedAnswer,
     bool clearLockedAnswer = false,
     bool? wasLastCorrect,
     bool clearWasLastCorrect = false,
     String? spellingNotice,
     bool clearSpellingNotice = false,
-    bool? hintRevealed,
     int? elapsedSeconds,
     bool? isFinished,
   }) {
@@ -93,7 +99,10 @@ class QuizSessionState {
       questions: questions,
       currentIndex: currentIndex ?? this.currentIndex,
       correctCount: correctCount ?? this.correctCount,
-      hintsUsed: hintsUsed ?? this.hintsUsed,
+      jokersUsedTotal: jokersUsedTotal ?? this.jokersUsedTotal,
+      jokerCostTotal: jokerCostTotal ?? this.jokerCostTotal,
+      usedJokersThisQuestion:
+          usedJokersThisQuestion ?? this.usedJokersThisQuestion,
       lockedAnswer:
           clearLockedAnswer ? null : (lockedAnswer ?? this.lockedAnswer),
       wasLastCorrect:
@@ -101,7 +110,6 @@ class QuizSessionState {
       spellingNotice: clearSpellingNotice
           ? null
           : (spellingNotice ?? this.spellingNotice),
-      hintRevealed: hintRevealed ?? this.hintRevealed,
       startedAt: startedAt,
       elapsedSeconds: elapsedSeconds ?? this.elapsedSeconds,
       isFinished: isFinished ?? this.isFinished,
@@ -112,10 +120,10 @@ class QuizSessionState {
 int computeScore({
   required int correctCount,
   required int durationSeconds,
-  required int hintsUsed,
+  required int jokerCost,
 }) {
   final int timeBonus = ((600 - durationSeconds).clamp(0, 600)).toInt();
-  final int raw = correctCount * 100 + timeBonus - hintsUsed * 5;
+  final int raw = correctCount * 100 + timeBonus - jokerCost;
   return raw < 0 ? 0 : raw;
 }
 
@@ -158,11 +166,12 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
       questions: questions,
       currentIndex: 0,
       correctCount: 0,
-      hintsUsed: 0,
+      jokersUsedTotal: 0,
+      jokerCostTotal: 0,
+      usedJokersThisQuestion: const {},
       lockedAnswer: null,
       wasLastCorrect: null,
       spellingNotice: null,
-      hintRevealed: false,
       startedAt: now,
       elapsedSeconds: 0,
       isFinished: false,
@@ -180,12 +189,15 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
     });
   }
 
-  void revealHint() {
+  void useJoker(JokerType joker) {
     final current = state.value;
-    if (current == null || current.hintRevealed || current.isAnswered) return;
+    if (current == null || current.isAnswered) return;
+    if (current.usedJokersThisQuestion.contains(joker)) return;
+    final next = {...current.usedJokersThisQuestion, joker};
     state = AsyncData(current.copyWith(
-      hintRevealed: true,
-      hintsUsed: current.hintsUsed + 1,
+      usedJokersThisQuestion: next,
+      jokersUsedTotal: current.jokersUsedTotal + 1,
+      jokerCostTotal: current.jokerCostTotal + joker.cost,
     ));
   }
 
@@ -202,6 +214,10 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
     final responseMs = now - _questionStartMs;
 
     final db = ref.read(databaseProvider);
+    final usedJokers = current.usedJokersThisQuestion;
+    final jokersJson = usedJokers.isEmpty
+        ? null
+        : jsonEncode(usedJokers.map((j) => j.code).toList());
     await db.insertQuizAttempt(
       QuizAttemptsCompanion.insert(
         id: _uuid.v4(),
@@ -209,9 +225,10 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
         itemId: question.itemId,
         questionOrder: current.currentIndex,
         wasCorrect: wasCorrect,
-        hintUsed: Value(current.hintRevealed),
+        hintUsed: Value(usedJokers.isNotEmpty),
         responseMs: responseMs,
         pickedOption: Value(picked),
+        jokersJson: Value(jokersJson),
         answeredAt: now,
       ),
     );
@@ -239,7 +256,7 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
       clearLockedAnswer: true,
       clearWasLastCorrect: true,
       clearSpellingNotice: true,
-      hintRevealed: false,
+      usedJokersThisQuestion: const {},
     ));
   }
 
@@ -253,7 +270,7 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
     final score = computeScore(
       correctCount: current.correctCount,
       durationSeconds: durationSeconds,
-      hintsUsed: current.hintsUsed,
+      jokerCost: current.jokerCostTotal,
     );
     final db = ref.read(databaseProvider);
     await db.finalizeQuizSession(
@@ -262,7 +279,7 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
       durationMs: durationMs,
       correctCount: current.correctCount,
       totalCount: current.questions.length,
-      hintsUsed: current.hintsUsed,
+      hintsUsed: current.jokersUsedTotal,
       scorePoints: score,
     );
     state = AsyncData(current.copyWith(
