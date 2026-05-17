@@ -1,0 +1,78 @@
+import 'package:flutter/material.dart';
+
+Future<void> showScoreExplanationDialog(BuildContext context) {
+  final theme = Theme.of(context);
+  return showDialog<void>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Wie werden die Punkte berechnet?'),
+      content: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Punkte = Treffer × 100  +  Zeit-Bonus  −  Hinweise × 5',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontFamily: 'monospace',
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 14),
+            const _Bullet(
+              text: '100 Punkte pro richtiger Antwort '
+                  '→ bis zu 1 000 P bei 10/10.',
+            ),
+            const _Bullet(
+              text: 'Zeit-Bonus: 600 minus Sekunden Spielzeit, '
+                  'gekappt auf 0…600. '
+                  '0 s → +600, 1 min → +540, 5 min → +300, '
+                  '10 min und mehr → 0.',
+            ),
+            const _Bullet(text: '−5 Punkte pro aufgedecktem Hinweis.'),
+            const _Bullet(text: 'Negative Summen werden auf 0 gesetzt.'),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                'Beispiel\n'
+                '8 richtig in 4:12 mit 2 Hinweisen\n'
+                '→ 800 + (600 − 252) − 10 = 1 138 P',
+                style: theme.textTheme.bodySmall,
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(),
+          child: const Text('Verstanden'),
+        ),
+      ],
+    ),
+  );
+}
+
+class _Bullet extends StatelessWidget {
+  const _Bullet({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('• '),
+          Expanded(child: Text(text)),
+        ],
+      ),
+    );
+  }
+}

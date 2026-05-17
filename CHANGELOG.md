@@ -7,6 +7,28 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Added — Iteration 4 (Bestenliste-UI + Navigation)
+- **HighscoreScreen** mit 4 Tabs (Heute / Woche / Monat / Ewig). Pro
+  Eintrag: Rang (🥇🥈🥉 für Top 3, danach Zahl), Spielername, Score,
+  Treffer/Total, Lektion, Richtung, Dauer, relatives Datum.
+- **Drawer-Menü** links neben „Vokabeltrainer" mit Header (`🇩🇪 ↔ 🇭🇷`)
+  und den Einträgen „Lektionen" (aktiv markiert) und „Bestenliste".
+- **Info-Dialog** zur Punkte-Formel in der Highscore-AppBar:
+  `Treffer × 100 + max(0, 600 − Sekunden) − Hinweise × 5`, inkl.
+  konkretem Beispiel.
+- DAO `AppDatabase.topSessionsDetailed(...)` joint Sessions mit
+  `players` und `lessons_cache`, sodass Anzeigename und Lektions-Titel
+  ohne N+1-Queries verfügbar sind.
+- `LeaderboardRange`-Enum mit `boundsNow()` für die vier Zeitfenster
+  (lokale Mitternachts-Grenzen, Wochenstart Montag).
+
+### Changed — Iteration 4
+- **QuizOptionButton** zeigt keinen Sprach-Chip mehr vor dem Vokabeltext
+  — die Sprache der Optionen ist bereits durch die Prompt-Karte oben
+  eindeutig.
+- **Refresh-Button** aus der Home-AppBar entfernt (Sync läuft beim
+  App-Start automatisch, Re-Sync kommt bei Bedarf später in den Drawer).
+
 ### Added — Iteration 3 (Lernspiel + Highscore-Fundament)
 - **Multiple-Choice-Quiz** je Lektion: 10 Vokabeln, leichteste zuerst
   (`difficulty ASC`), 4 Optionen aus derselben Lektion, falsche Auswahl

@@ -6,13 +6,11 @@ class QuizOptionButton extends StatelessWidget {
   const QuizOptionButton({
     super.key,
     required this.label,
-    required this.langLabel,
     required this.state,
     required this.onTap,
   });
 
   final String label;
-  final String langLabel;
   final QuizOptionState state;
   final VoidCallback? onTap;
 
@@ -58,31 +56,9 @@ class QuizOptionButton extends StatelessWidget {
               border: Border.all(color: border, width: 1.5),
             ),
             padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: scheme.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: scheme.primary.withValues(alpha: 0.5),
-                      width: 1,
-                    ),
-                  ),
-                  child: Text(
-                    langLabel,
-                    style: TextStyle(
-                      color: scheme.primary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 11,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     label,

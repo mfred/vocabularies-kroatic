@@ -182,7 +182,6 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                 );
                 return QuizOptionButton(
                   label: opt,
-                  langLabel: question.direction.answerLang,
                   state: optState,
                   onTap: state.isAnswered
                       ? null

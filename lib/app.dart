@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/database/database.dart';
+import 'features/highscore/screens/highscore_screen.dart';
 import 'features/lessons/lesson_detail_screen.dart';
 import 'shared/providers.dart';
 
@@ -46,8 +47,8 @@ class SyncStatusScreen extends ConsumerWidget {
     final syncAsync = ref.watch(syncResultProvider);
 
     return Scaffold(
+      drawer: const _AppDrawer(),
       appBar: AppBar(
-        titleSpacing: 16,
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: const [
@@ -56,13 +57,6 @@ class SyncStatusScreen extends ConsumerWidget {
             Text('🇩🇪 ↔ 🇭🇷', style: TextStyle(fontSize: 20)),
           ],
         ),
-        actions: [
-          IconButton(
-            tooltip: 'Erneut synchronisieren',
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.invalidate(syncResultProvider),
-          ),
-        ],
       ),
       body: lessonsAsync.when(
         loading: () => const _LoadingView(),
@@ -373,6 +367,76 @@ class _TopicCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AppDrawer extends StatelessWidget {
+  const _AppDrawer();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Drawer(
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+              decoration: BoxDecoration(
+                color: scheme.primaryContainer.withValues(alpha: 0.55),
+                border: Border(
+                  bottom: BorderSide(color: scheme.outlineVariant),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Vokabeltrainer',
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: scheme.onPrimaryContainer,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text('🇩🇪 ↔ 🇭🇷', style: TextStyle(fontSize: 22)),
+                ],
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.home_outlined),
+              title: const Text('Lektionen'),
+              selected: true,
+              onTap: () => Navigator.of(context).pop(),
+            ),
+            ListTile(
+              leading: const Icon(Icons.emoji_events_outlined),
+              title: const Text('Bestenliste'),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const HighscoreScreen(),
+                  ),
+                );
+              },
+            ),
+            const Spacer(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              child: Text(
+                'Deutsch ↔ Kroatisch',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

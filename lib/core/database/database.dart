@@ -240,6 +240,53 @@ class AppDatabase extends _$AppDatabase {
     }
     return q.get();
   }
+
+  Future<List<DetailedSessionRow>> topSessionsDetailed({
+    required int sinceMs,
+    required int untilMs,
+    String? lessonId,
+    int limit = 50,
+  }) async {
+    final q = select(quizSessions).join([
+      leftOuterJoin(players, players.id.equalsExp(quizSessions.playerId)),
+      leftOuterJoin(
+        lessonsCache,
+        lessonsCache.lessonId.equalsExp(quizSessions.lessonId),
+      ),
+    ])
+      ..where(quizSessions.finishedAt.isNotNull() &
+          quizSessions.finishedAt.isBetweenValues(sinceMs, untilMs))
+      ..orderBy([
+        OrderingTerm(
+            expression: quizSessions.scorePoints,
+            mode: OrderingMode.desc),
+        OrderingTerm(expression: quizSessions.durationMs),
+      ])
+      ..limit(limit);
+    if (lessonId != null) {
+      q.where(quizSessions.lessonId.equals(lessonId));
+    }
+    final rows = await q.get();
+    return rows
+        .map((r) => DetailedSessionRow(
+              session: r.readTable(quizSessions),
+              player: r.readTableOrNull(players),
+              lesson: r.readTableOrNull(lessonsCache),
+            ))
+        .toList();
+  }
+}
+
+class DetailedSessionRow {
+  const DetailedSessionRow({
+    required this.session,
+    required this.player,
+    required this.lesson,
+  });
+
+  final QuizSession session;
+  final Player? player;
+  final LessonsCacheData? lesson;
 }
 
 QueryExecutor _openConnection() {
