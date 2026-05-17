@@ -1,6 +1,8 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import '../../features/quiz/models/item_attempt_stats.dart';
+
 part 'database.g.dart';
 
 class Items extends Table {
@@ -219,6 +221,49 @@ class AppDatabase extends _$AppDatabase {
         .toSet();
   }
 
+  Future<Map<String, ItemAttemptStats>> attemptStatsByItem({
+    required String playerId,
+    required String mode,
+  }) async {
+    final query = select(quizAttempts).join([
+      innerJoin(
+        quizSessions,
+        quizSessions.id.equalsExp(quizAttempts.sessionId),
+      ),
+    ])
+      ..where(quizSessions.playerId.equals(playerId) &
+          quizSessions.mode.equals(mode))
+      ..orderBy([OrderingTerm.asc(quizAttempts.answeredAt)]);
+    final rows = await query.get();
+    final out = <String, ItemAttemptStats>{};
+    for (final r in rows) {
+      final a = r.readTable(quizAttempts);
+      final s = out[a.itemId] ?? ItemAttemptStats.empty();
+      out[a.itemId] = s.applyAttempt(
+        wasCorrect: a.wasCorrect,
+        atMs: a.answeredAt,
+      );
+    }
+    return out;
+  }
+
+  Future<List<DetailedAttemptRow>> attemptsWithItemForSession(
+    String sessionId,
+  ) async {
+    final query = select(quizAttempts).join([
+      leftOuterJoin(items, items.id.equalsExp(quizAttempts.itemId)),
+    ])
+      ..where(quizAttempts.sessionId.equals(sessionId))
+      ..orderBy([OrderingTerm.asc(quizAttempts.questionOrder)]);
+    final rows = await query.get();
+    return rows
+        .map((r) => DetailedAttemptRow(
+              attempt: r.readTable(quizAttempts),
+              item: r.readTableOrNull(items),
+            ))
+        .toList();
+  }
+
   Future<List<QuizSession>> topSessions({
     required int sinceMs,
     required int untilMs,
@@ -287,6 +332,13 @@ class DetailedSessionRow {
   final QuizSession session;
   final Player? player;
   final LessonsCacheData? lesson;
+}
+
+class DetailedAttemptRow {
+  const DetailedAttemptRow({required this.attempt, required this.item});
+
+  final QuizAttempt attempt;
+  final Item? item;
 }
 
 QueryExecutor _openConnection() {

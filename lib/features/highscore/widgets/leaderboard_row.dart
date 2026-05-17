@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import '../models/leaderboard_entry.dart';
 
 class LeaderboardRow extends StatelessWidget {
-  const LeaderboardRow({super.key, required this.entry});
+  const LeaderboardRow({super.key, required this.entry, this.onTap});
 
   final LeaderboardEntry entry;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -19,20 +20,27 @@ class LeaderboardRow extends StatelessWidget {
     final relative = _relativeDate(entry.finishedAt);
     final directionLabel = entry.direction?.compactLabel ?? '?';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
         color: scheme.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: entry.rank <= 3
-              ? scheme.primary.withValues(alpha: 0.45)
-              : scheme.outlineVariant,
-          width: entry.rank <= 3 ? 1.5 : 1,
-        ),
-      ),
-      child: Row(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: entry.rank <= 3
+                    ? scheme.primary.withValues(alpha: 0.45)
+                    : scheme.outlineVariant,
+                width: entry.rank <= 3 ? 1.5 : 1,
+              ),
+            ),
+            child: Row(
         children: [
           SizedBox(
             width: 44,
@@ -92,7 +100,15 @@ class LeaderboardRow extends StatelessWidget {
               ),
             ],
           ),
-        ],
+          const SizedBox(width: 4),
+          Icon(
+            Icons.chevron_right,
+            color: scheme.outline,
+          ),
+            ],
+          ),
+          ),
+        ),
       ),
     );
   }

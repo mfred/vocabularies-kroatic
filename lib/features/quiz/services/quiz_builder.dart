@@ -1,8 +1,10 @@
 import 'dart:math';
 
 import '../../../core/database/database.dart';
+import '../models/item_attempt_stats.dart';
 import '../models/quiz_direction.dart';
 import '../models/quiz_question.dart';
+import 'quiz_selector.dart';
 
 const int kQuizQuestionCount = 10;
 const int kQuizOptionsPerQuestion = 4;
@@ -21,11 +23,15 @@ class QuizBuilder {
     final items = await _db.itemsForLesson(lessonId);
     if (items.isEmpty) return const [];
 
-    final picked = _pickQuestionItems(items);
-    final seenIds = await _db.seenItemIdsForPlayer(
+    final stats = await _db.attemptStatsByItem(
       playerId: playerId,
       mode: direction.mode,
     );
+    final picked = _pickQuestionItems(items, stats);
+    final seenIds = <String>{
+      for (final e in stats.entries)
+        if (e.value.seenCount > 0) e.key,
+    };
 
     return picked.map((item) {
       final isNew = !seenIds.contains(item.id);
@@ -50,26 +56,19 @@ class QuizBuilder {
     }).toList();
   }
 
-  List<Item> _pickQuestionItems(List<Item> all) {
+  List<Item> _pickQuestionItems(
+    List<Item> all,
+    Map<String, ItemAttemptStats> stats,
+  ) {
     final words = all.where((i) => i.stage == 'words').toList();
     final phrases = all.where((i) => i.stage == 'phrases').toList();
     final sentences = all.where((i) => i.stage == 'sentences').toList();
-    final pool = <Item>[
-      ..._sorted(words),
-      ..._sorted(phrases),
-      ..._sorted(sentences),
-    ];
-    return pool.take(kQuizQuestionCount).toList();
-  }
-
-  List<Item> _sorted(List<Item> list) {
-    final copy = [...list];
-    copy.sort((a, b) {
-      final byDiff = a.difficulty.compareTo(b.difficulty);
-      if (byDiff != 0) return byDiff;
-      return a.id.compareTo(b.id);
-    });
-    return copy;
+    final stagePool = <Item>[...words, ...phrases, ...sentences];
+    return QuizSelector.pick(
+      items: stagePool,
+      stats: stats,
+      count: kQuizQuestionCount,
+    );
   }
 
   List<String> _pickDistractors({

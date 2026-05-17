@@ -14,10 +14,13 @@ class LeaderboardService {
     int limit = 50,
   }) async {
     final bounds = range.boundsNow();
+    // lessonId == '' wird wie null behandelt (für defensive Aufrufer).
+    final effectiveLessonId =
+        (lessonId == null || lessonId.isEmpty) ? null : lessonId;
     final rows = await _db.topSessionsDetailed(
       sinceMs: bounds.sinceMs,
       untilMs: bounds.untilMs,
-      lessonId: lessonId,
+      lessonId: effectiveLessonId,
       limit: limit,
     );
     return List<LeaderboardEntry>.generate(rows.length, (i) {
@@ -25,6 +28,7 @@ class LeaderboardService {
       final s = row.session;
       return LeaderboardEntry(
         rank: i + 1,
+        sessionId: s.id,
         playerId: s.playerId,
         displayName: row.player?.displayName ?? '?',
         lessonId: s.lessonId,

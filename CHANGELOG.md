@@ -7,6 +7,26 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Added — Iteration 6 (Adaptive Quiz-Auswahl + Highscore-Detail)
+- **Adaptive Quiz-Selektion**: Statt immer der gleichen 10 leichtesten
+  Items teilt der neue `QuizSelector` die Vokabel-Pool in drei Buckets
+  (NEW / STUMBLED / MASTERED) und zieht 6 + 3 + 1, mit Auffüll-Fallback.
+  Innerhalb jedes Buckets werden „am längsten nicht gesehene" Items
+  bevorzugt. Falsch beantwortete Vokabeln tauchen verlässlich wieder
+  auf, gemeisterte werden gelegentlich zur Sicherung erinnert.
+  DAO `attemptStatsByItem(playerId, mode)` aggregiert Treffer-Historie
+  in einem Drift-JOIN.
+- **HighscoreScreen-Filter**: Über den vier Zeitfenstern liegt eine
+  horizontal scrollbare FilterChip-Reihe mit „Alle" + den 9 Lektionen.
+  Auswahl wirkt sich auf alle Tabs aus.
+- **Session-Detailansicht**: Tap auf eine Bestenlisten-Zeile öffnet
+  `SessionDetailScreen` mit Header-Statistik (Treffer, Quote, Zeit,
+  Hinweise, Punkte, Richtung) und den 10 Versuchen in
+  Frage-Reihenfolge — pro Versuch ✓/✗, Vokabel-Paar, gewählte Option
+  (bei Falschen), Antwortzeit, Hinweis-Marker.
+- Unit-Tests `test/quiz_selector_test.dart` decken Erstspiel-, Stumbled-
+  und Steady-State-Verhalten der Bucket-Logik ab.
+
 ### Fixed — Iteration 5 Hotfix
 - **Sync fiel auf Offline-Cache zurück**: das in `advanced.json`
   ausgelieferte `stages`-Array entsprach nicht dem Freezed-Schema

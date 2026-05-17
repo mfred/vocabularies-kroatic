@@ -4,8 +4,10 @@ import '../core/database/database.dart';
 import '../core/network/dio_client.dart';
 import '../core/network/manifest_sync_service.dart';
 import '../features/highscore/models/leaderboard_entry.dart';
-import '../features/highscore/models/leaderboard_range.dart';
+import '../features/highscore/models/leaderboard_filter.dart';
+import '../features/highscore/models/session_detail.dart';
 import '../features/highscore/services/leaderboard_service.dart';
+import '../features/highscore/services/session_detail_service.dart';
 import '../features/players/player_service.dart';
 
 final databaseProvider = Provider<AppDatabase>((ref) {
@@ -45,6 +47,18 @@ final leaderboardServiceProvider = Provider<LeaderboardService>((ref) {
 });
 
 final leaderboardProvider = FutureProvider.autoDispose
-    .family<List<LeaderboardEntry>, LeaderboardRange>((ref, range) async {
-  return ref.watch(leaderboardServiceProvider).top(range: range);
+    .family<List<LeaderboardEntry>, LeaderboardFilter>((ref, filter) async {
+  return ref.watch(leaderboardServiceProvider).top(
+        range: filter.range,
+        lessonId: filter.lessonId,
+      );
+});
+
+final sessionDetailServiceProvider = Provider<SessionDetailService>((ref) {
+  return SessionDetailService(ref.watch(databaseProvider));
+});
+
+final sessionDetailProvider = FutureProvider.autoDispose
+    .family<SessionDetail?, String>((ref, sessionId) async {
+  return ref.watch(sessionDetailServiceProvider).load(sessionId);
 });

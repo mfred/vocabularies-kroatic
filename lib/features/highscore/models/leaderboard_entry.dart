@@ -3,6 +3,7 @@ import '../../quiz/models/quiz_direction.dart';
 class LeaderboardEntry {
   const LeaderboardEntry({
     required this.rank,
+    required this.sessionId,
     required this.playerId,
     required this.displayName,
     required this.lessonId,
@@ -17,6 +18,7 @@ class LeaderboardEntry {
   });
 
   final int rank;
+  final String sessionId;
   final String playerId;
   final String displayName;
   final String lessonId;
