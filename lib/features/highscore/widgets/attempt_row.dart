@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/widgets/speak_button.dart';
 import '../../quiz/models/quiz_direction.dart';
 import '../models/session_detail.dart';
 
@@ -78,11 +79,19 @@ class AttemptRow extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 2),
-          Text(
-            answer ?? '—',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  answer ?? '—',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              if (attempt.hrText != null && attempt.hrText!.isNotEmpty)
+                SpeakButton(text: attempt.hrText!, langTag: 'hr-HR'),
+            ],
           ),
           if (!attempt.wasCorrect &&
               attempt.pickedOption != null &&

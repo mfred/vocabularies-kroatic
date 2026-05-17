@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/database/database.dart';
+import '../../core/widgets/speak_button.dart';
 import '../../shared/providers.dart';
 import '../quiz/models/quiz_direction.dart';
 import '../quiz/screens/quiz_screen.dart';
@@ -227,6 +228,11 @@ class _ItemCard extends StatelessWidget {
                     ),
                   ),
                 ),
+                SpeakButton(
+                  text: item.deText,
+                  langTag: 'de-DE',
+                  color: theme.colorScheme.tertiary,
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -258,6 +264,7 @@ class _ItemCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                SpeakButton(text: item.hrText, langTag: 'hr-HR'),
                 _DiffBadge(difficulty: item.difficulty),
               ],
             ),

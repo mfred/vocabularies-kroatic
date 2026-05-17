@@ -7,6 +7,23 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Added — Iteration 7 (Sprachausgabe / TTS)
+- **`TtsService`** als dünner Wrapper um `flutter_tts`, mit lazy
+  Engine-Init (Speech-Rate 0.45, Volume 1.0), kachiertem
+  `isLanguageAvailable`-Check je Sprache (hr-HR, de-DE) und
+  Sprachwechsel nur bei Bedarf.
+- **`SpeakButton`** als wiederverwendbares Icon: zeigt
+  `volume_up_outlined`, beim Drücken `graphic_eq` (während des Sprechens),
+  `volume_off_outlined` wenn die System-TTS die angefragte Sprache
+  nicht installiert hat (Button dann deaktiviert mit Tooltip).
+- Audio-Buttons eingebaut in:
+  - **Lesson-Detail-Item-Karte**: DE-Text (de-DE) und HR-Text (hr-HR)
+    jeweils einzeln aussprechbar.
+  - **Quiz-Prompt-Karte**: spricht das aktuell gefragte Wort in der
+    Prompt-Sprache (hängt von Quiz-Richtung ab).
+  - **Highscore-Session-Detail / AttemptRow**: spricht die kroatische
+    Vokabel jedes Versuchs (hr-HR) zur Nachbereitung.
+
 ### Added — Iteration 6 (Adaptive Quiz-Auswahl + Highscore-Detail)
 - **Adaptive Quiz-Selektion**: Statt immer der gleichen 10 leichtesten
   Items teilt der neue `QuizSelector` die Vokabel-Pool in drei Buckets

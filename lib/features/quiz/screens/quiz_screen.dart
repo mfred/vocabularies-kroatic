@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/speak_button.dart';
 import '../controllers/quiz_session_controller.dart';
 import '../models/quiz_direction.dart';
 import '../widgets/quiz_hint_panel.dart';
@@ -169,7 +170,12 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              _PromptCard(text: question.prompt),
+              _PromptCard(
+                text: question.prompt,
+                langTag: question.direction == QuizDirection.deToHr
+                    ? 'de-DE'
+                    : 'hr-HR',
+              ),
               const SizedBox(height: 18),
               ...question.options.map((opt) {
                 final optState = _optionStateFor(
@@ -275,9 +281,10 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
 }
 
 class _PromptCard extends StatelessWidget {
-  const _PromptCard({required this.text});
+  const _PromptCard({required this.text, required this.langTag});
 
   final String text;
+  final String langTag;
 
   @override
   Widget build(BuildContext context) {
@@ -285,18 +292,30 @@ class _PromptCard extends StatelessWidget {
     final scheme = theme.colorScheme;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 22, 20, 22),
+      padding: const EdgeInsets.fromLTRB(20, 14, 12, 14),
       decoration: BoxDecoration(
         color: scheme.primaryContainer.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: scheme.primary.withValues(alpha: 0.35)),
       ),
-      child: Text(
-        text,
-        style: theme.textTheme.headlineSmall?.copyWith(
-          fontWeight: FontWeight.w700,
-          color: scheme.onPrimaryContainer,
-        ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              text,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: scheme.onPrimaryContainer,
+              ),
+            ),
+          ),
+          SpeakButton(
+            text: text,
+            langTag: langTag,
+            color: scheme.onPrimaryContainer,
+            size: 26,
+          ),
+        ],
       ),
     );
   }
