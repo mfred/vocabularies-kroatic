@@ -22,6 +22,35 @@ class SystemIntents {
     await intent.launch();
   }
 
+  static Future<void> openInputMethodSettings() async {
+    if (!Platform.isAndroid) return;
+    const intent =
+        AndroidIntent(action: 'android.settings.INPUT_METHOD_SETTINGS');
+    await intent.launch();
+  }
+
+  static Future<void> openPackageLaunch(String packageId) async {
+    if (!Platform.isAndroid) return;
+    try {
+      final intent = AndroidIntent(
+        action: 'android.intent.action.MAIN',
+        package: packageId,
+      );
+      await intent.launch();
+    } catch (_) {
+      await openPlayStorePackage(packageId);
+    }
+  }
+
+  static Future<void> openAppInfo(String packageId) async {
+    if (!Platform.isAndroid) return;
+    final intent = AndroidIntent(
+      action: 'android.settings.APPLICATION_DETAILS_SETTINGS',
+      data: 'package:$packageId',
+    );
+    await intent.launch();
+  }
+
   static Future<void> openPlayStorePackage(String packageId) async {
     if (!Platform.isAndroid) return;
     final marketIntent = AndroidIntent(

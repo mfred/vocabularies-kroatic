@@ -7,6 +7,25 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Changed — Iteration 11 (bessere Deep-Links für „Sprache installieren")
+- **STT-Dialog**: `VOICE_INPUT_SETTINGS` führte auf „Digitale
+  Assistenz-App" (falsche Seite). Ersetzt durch
+  `INPUT_METHOD_SETTINGS` (Tastaturen-Liste) und einen
+  zweiten Knopf „Google-App öffnen", der die Google-App startet
+  (`AndroidIntent(action: MAIN, package: …)`, Fallback auf
+  Play-Store). Dialog erklärt schrittweise den Weg:
+  Tastatureinstellungen → Gboard → Spracheingabe →
+  Offline-Spracherkennung → Sprachen → Hrvatski.
+- **TTS-Dialog**: zusätzlicher Button „App-Info: Google TTS"
+  öffnet `APPLICATION_DETAILS_SETTINGS` für
+  `com.google.android.tts` (Update-Suche möglich). Dialog
+  führt jetzt Schritt-für-Schritt: Sprachdienste →
+  Bevorzugte Engine → Zahnrad → Sprachen → Hrvatski.
+- Dialog-Body wurde generell zu einer nummerierten Anleitung
+  ausgebaut, mit primärem `FilledButton` und sekundärem
+  `OutlinedButton` direkt im Content; „Schließen" und
+  „Im Play Store" bleiben in den `AlertDialog.actions`.
+
 ### Added — Iteration 10 (Joker-System)
 - **Drei Joker-Typen** ersetzen den bisherigen generischen Hinweis:
   - **Lautschrift (🔤)** — zeigt das IPA der Antwort, Strafe −5 P.
