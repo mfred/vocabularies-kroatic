@@ -46,12 +46,67 @@ class LessonsCache extends Table {
   Set<Column> get primaryKey => {lessonId};
 }
 
-@DriftDatabase(tables: [Items, LessonsCache])
+class Players extends Table {
+  TextColumn get id => text()();
+  TextColumn get displayName => text()();
+  IntColumn get createdAt => integer()();
+  BoolColumn get isLocal => boolean().withDefault(const Constant(true))();
+  TextColumn get remoteUserId => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class QuizSessions extends Table {
+  TextColumn get id => text()();
+  TextColumn get playerId => text().references(Players, #id)();
+  TextColumn get lessonId => text()();
+  TextColumn get mode => text().withDefault(const Constant('mc_de_hr'))();
+  IntColumn get startedAt => integer()();
+  IntColumn get finishedAt => integer().nullable()();
+  IntColumn get durationMs => integer().nullable()();
+  IntColumn get correctCount => integer().withDefault(const Constant(0))();
+  IntColumn get totalCount => integer().withDefault(const Constant(0))();
+  IntColumn get hintsUsed => integer().withDefault(const Constant(0))();
+  IntColumn get scorePoints => integer().withDefault(const Constant(0))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class QuizAttempts extends Table {
+  TextColumn get id => text()();
+  TextColumn get sessionId => text().references(QuizSessions, #id)();
+  TextColumn get itemId => text()();
+  IntColumn get questionOrder => integer()();
+  BoolColumn get wasCorrect => boolean()();
+  BoolColumn get hintUsed => boolean().withDefault(const Constant(false))();
+  IntColumn get responseMs => integer()();
+  TextColumn get pickedOption => text().nullable()();
+  IntColumn get answeredAt => integer()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DriftDatabase(tables: [Items, LessonsCache, Players, QuizSessions, QuizAttempts])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) => m.createAll(),
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.createTable(players);
+            await m.createTable(quizSessions);
+            await m.createTable(quizAttempts);
+          }
+        },
+      );
 
   Future<List<LessonsCacheData>> allLessonsByOrder() {
     return (select(lessonsCache)
@@ -99,6 +154,91 @@ class AppDatabase extends _$AppDatabase {
             (t) => OrderingTerm(expression: t.id),
           ]))
         .get();
+  }
+
+  Future<Player?> getAnyLocalPlayer() {
+    return (select(players)
+          ..where((t) => t.isLocal.equals(true))
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
+  Future<void> insertPlayer(PlayersCompanion entry) {
+    return into(players).insert(entry);
+  }
+
+  Future<void> insertQuizSession(QuizSessionsCompanion entry) {
+    return into(quizSessions).insert(entry);
+  }
+
+  Future<void> finalizeQuizSession({
+    required String sessionId,
+    required int finishedAt,
+    required int durationMs,
+    required int correctCount,
+    required int totalCount,
+    required int hintsUsed,
+    required int scorePoints,
+  }) {
+    return (update(quizSessions)..where((t) => t.id.equals(sessionId))).write(
+      QuizSessionsCompanion(
+        finishedAt: Value(finishedAt),
+        durationMs: Value(durationMs),
+        correctCount: Value(correctCount),
+        totalCount: Value(totalCount),
+        hintsUsed: Value(hintsUsed),
+        scorePoints: Value(scorePoints),
+      ),
+    );
+  }
+
+  Future<QuizSession?> getQuizSession(String sessionId) {
+    return (select(quizSessions)..where((t) => t.id.equals(sessionId)))
+        .getSingleOrNull();
+  }
+
+  Future<void> insertQuizAttempt(QuizAttemptsCompanion entry) {
+    return into(quizAttempts).insert(entry);
+  }
+
+  Future<Set<String>> seenItemIdsForPlayer({
+    required String playerId,
+    required String mode,
+  }) async {
+    final query = select(quizAttempts).join([
+      innerJoin(
+        quizSessions,
+        quizSessions.id.equalsExp(quizAttempts.sessionId),
+      ),
+    ])
+      ..where(quizSessions.playerId.equals(playerId) &
+          quizSessions.mode.equals(mode));
+    final rows = await query.get();
+    return rows
+        .map((r) => r.readTable(quizAttempts).itemId)
+        .toSet();
+  }
+
+  Future<List<QuizSession>> topSessions({
+    required int sinceMs,
+    required int untilMs,
+    String? lessonId,
+    int limit = 50,
+  }) {
+    final q = select(quizSessions)
+      ..where((t) =>
+          t.finishedAt.isNotNull() &
+          t.finishedAt.isBetweenValues(sinceMs, untilMs))
+      ..orderBy([
+        (t) => OrderingTerm(
+            expression: t.scorePoints, mode: OrderingMode.desc),
+        (t) => OrderingTerm(expression: t.durationMs),
+      ])
+      ..limit(limit);
+    if (lessonId != null) {
+      q.where((t) => t.lessonId.equals(lessonId));
+    }
+    return q.get();
   }
 }
 

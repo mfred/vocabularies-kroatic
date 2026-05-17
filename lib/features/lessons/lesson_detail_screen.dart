@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/database/database.dart';
 import '../../shared/providers.dart';
+import '../quiz/models/quiz_direction.dart';
+import '../quiz/screens/quiz_screen.dart';
 
 class LessonDetailScreen extends ConsumerStatefulWidget {
   const LessonDetailScreen({super.key, required this.lesson});
@@ -16,6 +18,26 @@ class LessonDetailScreen extends ConsumerStatefulWidget {
 
 class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
   String _stage = 'words';
+  QuizDirection _direction = QuizDirection.deToHr;
+
+  int get _totalItems =>
+      widget.lesson.wordCount +
+      widget.lesson.phraseCount +
+      widget.lesson.sentenceCount;
+
+  bool get _canStartQuiz => _totalItems >= 4;
+
+  void _startQuiz() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => QuizScreen(
+          lessonId: widget.lesson.lessonId,
+          lessonTitle: widget.lesson.titleDe,
+          direction: _direction,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,6 +86,67 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
               showSelectedIcon: false,
               onSelectionChanged: (set) =>
                   setState(() => _stage = set.first),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(14),
+                border:
+                    Border.all(color: theme.colorScheme.outlineVariant),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Quiz-Richtung',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const Spacer(),
+                      SegmentedButton<QuizDirection>(
+                        segments: const [
+                          ButtonSegment(
+                            value: QuizDirection.deToHr,
+                            label: Text('🇩🇪 → 🇭🇷'),
+                          ),
+                          ButtonSegment(
+                            value: QuizDirection.hrToDe,
+                            label: Text('🇭🇷 → 🇩🇪'),
+                          ),
+                        ],
+                        selected: {_direction},
+                        showSelectedIcon: false,
+                        style: SegmentedButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        onSelectionChanged: (set) =>
+                            setState(() => _direction = set.first),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  FilledButton.icon(
+                    onPressed: _canStartQuiz ? _startQuiz : null,
+                    icon: const Icon(Icons.play_arrow),
+                    label: Text(
+                      _canStartQuiz
+                          ? 'Quiz starten (10)'
+                          : 'Zu wenige Items für ein Quiz',
+                    ),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           Expanded(

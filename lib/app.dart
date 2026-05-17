@@ -53,7 +53,7 @@ class SyncStatusScreen extends ConsumerWidget {
           children: const [
             Text('Vokabeltrainer'),
             SizedBox(width: 10),
-            Text('🇩🇪 → 🇭🇷', style: TextStyle(fontSize: 20)),
+            Text('🇩🇪 ↔ 🇭🇷', style: TextStyle(fontSize: 20)),
           ],
         ),
         actions: [

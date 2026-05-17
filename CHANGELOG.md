@@ -7,6 +7,27 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Added — Iteration 3 (Lernspiel + Highscore-Fundament)
+- **Multiple-Choice-Quiz** je Lektion: 10 Vokabeln, leichteste zuerst
+  (`difficulty ASC`), 4 Optionen aus derselben Lektion, falsche Auswahl
+  markiert beide Karten farblich. Erreichbar über „Quiz starten (10)" im
+  `LessonDetailScreen`.
+- **Bidirektionale Lernrichtung**: Pro Quiz-Session zwischen `🇩🇪 → 🇭🇷` und
+  `🇭🇷 → 🇩🇪` umschaltbar. AppBar-Titel im Home-Screen zeigt `🇩🇪 ↔ 🇭🇷` als
+  Hinweis auf die unterstützten Richtungen.
+- **„Neu eingeführt"-Hinweis**: Bei einem Wort, das in der gewählten
+  Richtung noch nie abgefragt wurde, wird der Hinweis-Button mit einer
+  `NEU`-Marke versehen; Aufdecken zeigt IPA, Notiz oder Anfangsbuchstaben.
+- **Zusammenfassungs-Screen**: Richtige / gesamt, Trefferquote in Prozent,
+  Zeit `mm:ss`, Hinweis-Anzahl und Punkte (`correct*100 + max(0, 600-sek) - hints*5`).
+- **Multi-User-Datenmodell vorbereitet** (Drift-Schema v2):
+  - `players` (UUID, lokaler Default „Du", `remoteUserId` für späteres Cloud-Sync),
+  - `quiz_sessions` (Modus, Start/Ende, Zähler, Score) und
+  - `quiz_attempts` (pro Frage: Treffer, Hinweis-Nutzung, Antwortzeit).
+  - DAO `topSessions(sinceMs, untilMs, lessonId?)` als Basis für die
+    Daily/Weekly/Monthly/Ewig-Bestenlisten, die in einer kommenden Iteration
+    eine UI bekommen.
+
 ### Changed
 - Daten-Repo `vocabularies-kroatic-data` auf Version **1.1.0** angehoben:
   alle 8 Lektionen auf ~100 Items hochgezogen, insgesamt **805 Items**
