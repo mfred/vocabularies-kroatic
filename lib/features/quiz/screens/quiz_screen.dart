@@ -169,10 +169,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              _PromptCard(
-                langLabel: question.direction.promptLang,
-                text: question.prompt,
-              ),
+              _PromptCard(text: question.prompt),
               const SizedBox(height: 18),
               ...question.options.map((opt) {
                 final optState = _optionStateFor(
@@ -278,9 +275,8 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
 }
 
 class _PromptCard extends StatelessWidget {
-  const _PromptCard({required this.langLabel, required this.text});
+  const _PromptCard({required this.text});
 
-  final String langLabel;
   final String text;
 
   @override
@@ -295,27 +291,12 @@ class _PromptCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: scheme.primary.withValues(alpha: 0.35)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            langLabel,
-            style: TextStyle(
-              color: scheme.primary,
-              fontWeight: FontWeight.w800,
-              fontSize: 12,
-              letterSpacing: 0.8,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            text,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: scheme.onPrimaryContainer,
-            ),
-          ),
-        ],
+      child: Text(
+        text,
+        style: theme.textTheme.headlineSmall?.copyWith(
+          fontWeight: FontWeight.w700,
+          color: scheme.onPrimaryContainer,
+        ),
       ),
     );
   }

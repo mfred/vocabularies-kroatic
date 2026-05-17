@@ -17,6 +17,7 @@ const Map<String, IconData> _topicIcons = {
   'restaurant': Icons.restaurant,
   'traffic': Icons.directions_bus_filled_outlined,
   'tourism': Icons.beach_access,
+  'advanced': Icons.psychology_outlined,
 };
 
 IconData _iconFor(String lessonId) =>

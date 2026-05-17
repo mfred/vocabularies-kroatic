@@ -7,6 +7,19 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Added — Iteration 5 (Datenrepo-Erweiterung + Quiz-Politur)
+- **Neue Lektion „Fortgeschritten"** wird beim App-Start automatisch
+  vom Manifest gezogen — 286 zusätzliche Items aus der eigenen
+  Vokabel-Sammlung, gegen die bestehenden 8 Lektionen entdupliziert
+  (`vocabularies-kroatic-data` 1.2.0).
+- Icon `psychology_outlined` für die neue Topic-Karte.
+
+### Changed — Iteration 5
+- **Quiz-Prompt-Karte ohne `DE`/`HR`-Label**: über dem abgefragten
+  Vokabeltext steht jetzt nur noch der Text selbst — die Sprache ist
+  durch die Richtungsanzeige in der AppBar (`🇩🇪→🇭🇷` / `🇭🇷→🇩🇪`) und
+  die Richtungswahl im Lesson-Detail bereits klar.
+
 ### Added — Iteration 4 (Bestenliste-UI + Navigation)
 - **HighscoreScreen** mit 4 Tabs (Heute / Woche / Monat / Ewig). Pro
   Eintrag: Rang (🥇🥈🥉 für Top 3, danach Zahl), Spielername, Score,
