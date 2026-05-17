@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/database/database.dart';
 import '../core/network/dio_client.dart';
 import '../core/network/manifest_sync_service.dart';
+import '../core/services/stt_service.dart';
 import '../core/services/tts_service.dart';
 import '../features/highscore/models/leaderboard_entry.dart';
 import '../features/highscore/models/leaderboard_filter.dart';
@@ -20,6 +21,12 @@ final databaseProvider = Provider<AppDatabase>((ref) {
 final ttsServiceProvider = Provider<TtsService>((ref) {
   final svc = TtsService();
   ref.onDispose(svc.dispose);
+  return svc;
+});
+
+final sttServiceProvider = Provider<SttService>((ref) {
+  final svc = SttService();
+  ref.onDispose(svc.cancel);
   return svc;
 });
 

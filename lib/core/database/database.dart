@@ -64,6 +64,7 @@ class QuizSessions extends Table {
   TextColumn get playerId => text().references(Players, #id)();
   TextColumn get lessonId => text()();
   TextColumn get mode => text().withDefault(const Constant('mc_de_hr'))();
+  TextColumn get direction => text().withDefault(const Constant('de_hr'))();
   IntColumn get startedAt => integer()();
   IntColumn get finishedAt => integer().nullable()();
   IntColumn get durationMs => integer().nullable()();
@@ -96,7 +97,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -106,6 +107,15 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(players);
             await m.createTable(quizSessions);
             await m.createTable(quizAttempts);
+          }
+          if (from < 3) {
+            await m.addColumn(quizSessions, quizSessions.direction);
+            // Backfill direction aus dem alten mode-Suffix.
+            await customStatement(
+              "UPDATE quiz_sessions SET direction = "
+              "CASE WHEN mode LIKE '%_hr_de' THEN 'hr_de' "
+              "ELSE 'de_hr' END",
+            );
           }
         },
       );
@@ -214,7 +224,7 @@ class AppDatabase extends _$AppDatabase {
       ),
     ])
       ..where(quizSessions.playerId.equals(playerId) &
-          quizSessions.mode.equals(mode));
+          quizSessions.direction.equals(mode));
     final rows = await query.get();
     return rows
         .map((r) => r.readTable(quizAttempts).itemId)
@@ -232,7 +242,7 @@ class AppDatabase extends _$AppDatabase {
       ),
     ])
       ..where(quizSessions.playerId.equals(playerId) &
-          quizSessions.mode.equals(mode))
+          quizSessions.direction.equals(mode))
       ..orderBy([OrderingTerm.asc(quizAttempts.answeredAt)]);
     final rows = await query.get();
     final out = <String, ItemAttemptStats>{};

@@ -4,11 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/speak_button.dart';
+import '../../../shared/providers.dart';
 import '../controllers/quiz_session_controller.dart';
 import '../models/quiz_direction.dart';
+import '../models/quiz_format.dart';
+import '../models/quiz_question.dart';
 import '../widgets/quiz_hint_panel.dart';
+import '../widgets/quiz_mic_input.dart';
 import '../widgets/quiz_option_button.dart';
 import '../widgets/quiz_progress_bar.dart';
+import '../widgets/quiz_text_input.dart';
 import 'quiz_summary_screen.dart';
 
 class QuizScreen extends ConsumerStatefulWidget {
@@ -17,11 +22,13 @@ class QuizScreen extends ConsumerStatefulWidget {
     required this.lessonId,
     required this.lessonTitle,
     required this.direction,
+    required this.format,
   });
 
   final String lessonId;
   final String lessonTitle;
   final QuizDirection direction;
+  final QuizFormat format;
 
   @override
   ConsumerState<QuizScreen> createState() => _QuizScreenState();
@@ -30,9 +37,13 @@ class QuizScreen extends ConsumerStatefulWidget {
 class _QuizScreenState extends ConsumerState<QuizScreen> {
   Timer? _advanceTimer;
   final List<bool?> _correctMask = [];
+  int? _autoPlayedIndex;
 
-  QuizSessionArgs get _args =>
-      QuizSessionArgs(lessonId: widget.lessonId, direction: widget.direction);
+  QuizSessionArgs get _args => QuizSessionArgs(
+        lessonId: widget.lessonId,
+        direction: widget.direction,
+        format: widget.format,
+      );
 
   @override
   void dispose() {
@@ -116,6 +127,8 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
       _correctMask.add(null);
     }
 
+    _autoPlayIfNeeded(state, question);
+
     return Scaffold(
       appBar: AppBar(
         title: Row(
@@ -170,27 +183,22 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              _PromptCard(
-                text: question.prompt,
-                langTag: question.direction == QuizDirection.deToHr
-                    ? 'de-DE'
-                    : 'hr-HR',
-              ),
+              if (widget.format == QuizFormat.listenSpeak &&
+                  !state.isAnswered)
+                _ListenPrompt(
+                  langTag: question.direction.promptLangTag,
+                  text: question.prompt,
+                  onTap: () => _playPrompt(question),
+                )
+              else
+                _PromptCard(
+                  text: question.prompt,
+                  langTag: question.direction.promptLangTag,
+                ),
               const SizedBox(height: 18),
-              ...question.options.map((opt) {
-                final optState = _optionStateFor(
-                  option: opt,
-                  question: question,
-                  state: state,
-                );
-                return QuizOptionButton(
-                  label: opt,
-                  state: optState,
-                  onTap: state.isAnswered
-                      ? null
-                      : () => _handleAnswer(opt, state),
-                );
-              }),
+              _buildAnswerArea(state, question),
+              if (state.isAnswered)
+                _AnswerFeedback(state: state, question: question),
               const Spacer(),
               QuizHintPanel(
                 hint: question.hint,
@@ -217,6 +225,56 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildAnswerArea(QuizSessionState state, QuizQuestion question) {
+    switch (widget.format) {
+      case QuizFormat.multipleChoice:
+        return Column(
+          children: [
+            for (final opt in question.options)
+              QuizOptionButton(
+                label: opt,
+                state: _optionStateFor(
+                  option: opt,
+                  question: question,
+                  state: state,
+                ),
+                onTap: state.isAnswered
+                    ? null
+                    : () => _handleAnswer(opt, state),
+              ),
+          ],
+        );
+      case QuizFormat.type:
+        return QuizTextInput(
+          langTag: question.direction.answerLangTag,
+          locked: state.isAnswered,
+          lastInput: state.lockedAnswer,
+          onSubmit: (text) => _handleAnswer(text, state),
+        );
+      case QuizFormat.speak:
+      case QuizFormat.listenSpeak:
+        return QuizMicInput(
+          langTag: question.direction.answerLangTag,
+          locked: state.isAnswered,
+          lastInput: state.lockedAnswer,
+          onSubmit: (text) => _handleAnswer(text, state),
+        );
+    }
+  }
+
+  void _autoPlayIfNeeded(QuizSessionState state, QuizQuestion question) {
+    if (widget.format != QuizFormat.listenSpeak) return;
+    if (state.isAnswered) return;
+    if (_autoPlayedIndex == state.currentIndex) return;
+    _autoPlayedIndex = state.currentIndex;
+    Future.microtask(() => _playPrompt(question));
+  }
+
+  Future<void> _playPrompt(QuizQuestion question) async {
+    final tts = ref.read(ttsServiceProvider);
+    await tts.speak(question.prompt, question.direction.promptLangTag);
   }
 
   QuizOptionState _optionStateFor({
@@ -315,6 +373,134 @@ class _PromptCard extends StatelessWidget {
             color: scheme.onPrimaryContainer,
             size: 26,
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ListenPrompt extends StatelessWidget {
+  const _ListenPrompt({
+    required this.langTag,
+    required this.text,
+    required this.onTap,
+  });
+
+  final String langTag;
+  final String text;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Material(
+      color: scheme.primaryContainer.withValues(alpha: 0.55),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: scheme.primary.withValues(alpha: 0.35),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.hearing,
+                size: 36,
+                color: scheme.onPrimaryContainer,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Tippe zum Anhören',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onPrimaryContainer,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.replay,
+                color: scheme.onPrimaryContainer,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AnswerFeedback extends StatelessWidget {
+  const _AnswerFeedback({required this.state, required this.question});
+
+  final QuizSessionState state;
+  final QuizQuestion question;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final wasCorrect = state.wasLastCorrect == true;
+    final notice = state.spellingNotice;
+    final accent = wasCorrect ? Colors.green : Colors.red;
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accent.withValues(alpha: 0.45)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                wasCorrect ? Icons.check_circle : Icons.cancel,
+                color: accent,
+                size: 20,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                wasCorrect ? 'Richtig!' : 'Falsch.',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: accent,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Korrekt: ${question.correct}',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              SpeakButton(
+                text: question.correct,
+                langTag: question.direction.answerLangTag,
+              ),
+            ],
+          ),
+          if (notice != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Achte auf die Schreibweise: $notice',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
         ],
       ),
     );

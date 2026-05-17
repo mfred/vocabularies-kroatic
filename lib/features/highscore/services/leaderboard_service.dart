@@ -46,7 +46,7 @@ class LeaderboardService {
 
   QuizDirection? _directionFromMode(String mode) {
     for (final d in QuizDirection.values) {
-      if (d.mode == mode) return d;
+      if (mode == d.code || mode.endsWith('_${d.code}')) return d;
     }
     return null;
   }

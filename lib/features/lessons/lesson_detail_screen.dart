@@ -5,6 +5,7 @@ import '../../core/database/database.dart';
 import '../../core/widgets/speak_button.dart';
 import '../../shared/providers.dart';
 import '../quiz/models/quiz_direction.dart';
+import '../quiz/models/quiz_format.dart';
 import '../quiz/screens/quiz_screen.dart';
 
 class LessonDetailScreen extends ConsumerStatefulWidget {
@@ -20,6 +21,7 @@ class LessonDetailScreen extends ConsumerStatefulWidget {
 class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
   String _stage = 'words';
   QuizDirection _direction = QuizDirection.deToHr;
+  QuizFormat _format = QuizFormat.multipleChoice;
 
   int get _totalItems =>
       widget.lesson.wordCount +
@@ -28,6 +30,19 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
 
   bool get _canStartQuiz => _totalItems >= 4;
 
+  IconData _iconForFormat(QuizFormat f) {
+    switch (f) {
+      case QuizFormat.multipleChoice:
+        return Icons.check_box_outlined;
+      case QuizFormat.type:
+        return Icons.edit_outlined;
+      case QuizFormat.speak:
+        return Icons.mic_none_outlined;
+      case QuizFormat.listenSpeak:
+        return Icons.hearing;
+    }
+  }
+
   void _startQuiz() {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -35,6 +50,7 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
           lessonId: widget.lesson.lessonId,
           lessonTitle: widget.lesson.titleDe,
           direction: _direction,
+          format: _format,
         ),
       ),
     );
@@ -132,6 +148,37 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
                             setState(() => _direction = set.first),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Format',
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  SizedBox(
+                    width: double.infinity,
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        for (final f in QuizFormat.values)
+                          ChoiceChip(
+                            label: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(_iconForFormat(f), size: 16),
+                                const SizedBox(width: 6),
+                                Text(f.label),
+                              ],
+                            ),
+                            selected: _format == f,
+                            onSelected: (_) =>
+                                setState(() => _format = f),
+                          ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 10),
                   FilledButton.icon(

@@ -7,27 +7,34 @@ import 'package:uuid/uuid.dart';
 import '../../../core/database/database.dart';
 import '../../../shared/providers.dart';
 import '../models/quiz_direction.dart';
+import '../models/quiz_format.dart';
 import '../models/quiz_question.dart';
+import '../services/answer_evaluator.dart';
 import '../services/quiz_builder.dart';
 
 class QuizSessionArgs {
   const QuizSessionArgs({
     required this.lessonId,
     required this.direction,
+    required this.format,
   });
 
   final String lessonId;
   final QuizDirection direction;
+  final QuizFormat format;
+
+  String get sessionMode => '${format.code}_${direction.code}';
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is QuizSessionArgs &&
           other.lessonId == lessonId &&
-          other.direction == direction;
+          other.direction == direction &&
+          other.format == format;
 
   @override
-  int get hashCode => Object.hash(lessonId, direction);
+  int get hashCode => Object.hash(lessonId, direction, format);
 }
 
 class QuizSessionState {
@@ -39,6 +46,7 @@ class QuizSessionState {
     required this.hintsUsed,
     required this.lockedAnswer,
     required this.wasLastCorrect,
+    required this.spellingNotice,
     required this.hintRevealed,
     required this.startedAt,
     required this.elapsedSeconds,
@@ -52,6 +60,7 @@ class QuizSessionState {
   final int hintsUsed;
   final String? lockedAnswer;
   final bool? wasLastCorrect;
+  final String? spellingNotice;
   final bool hintRevealed;
   final int startedAt;
   final int elapsedSeconds;
@@ -73,6 +82,8 @@ class QuizSessionState {
     bool clearLockedAnswer = false,
     bool? wasLastCorrect,
     bool clearWasLastCorrect = false,
+    String? spellingNotice,
+    bool clearSpellingNotice = false,
     bool? hintRevealed,
     int? elapsedSeconds,
     bool? isFinished,
@@ -87,6 +98,9 @@ class QuizSessionState {
           clearLockedAnswer ? null : (lockedAnswer ?? this.lockedAnswer),
       wasLastCorrect:
           clearWasLastCorrect ? null : (wasLastCorrect ?? this.wasLastCorrect),
+      spellingNotice: clearSpellingNotice
+          ? null
+          : (spellingNotice ?? this.spellingNotice),
       hintRevealed: hintRevealed ?? this.hintRevealed,
       startedAt: startedAt,
       elapsedSeconds: elapsedSeconds ?? this.elapsedSeconds,
@@ -131,7 +145,8 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
         id: sessionId,
         playerId: player.id,
         lessonId: _args.lessonId,
-        mode: Value(_args.direction.mode),
+        mode: Value(_args.sessionMode),
+        direction: Value(_args.direction.code),
         startedAt: now,
         totalCount: Value(questions.length),
       ),
@@ -146,6 +161,7 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
       hintsUsed: 0,
       lockedAnswer: null,
       wasLastCorrect: null,
+      spellingNotice: null,
       hintRevealed: false,
       startedAt: now,
       elapsedSeconds: 0,
@@ -179,7 +195,9 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
     final question = current.current;
     if (question == null) return;
 
-    final wasCorrect = picked == question.correct;
+    final eval = const AnswerEvaluator().evaluate(picked, question.correct);
+    final wasCorrect = eval.isCorrect;
+    final spellingNotice = eval.hasSpellingNotice ? question.correct : null;
     final now = DateTime.now().millisecondsSinceEpoch;
     final responseMs = now - _questionStartMs;
 
@@ -201,6 +219,8 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
     state = AsyncData(current.copyWith(
       lockedAnswer: picked,
       wasLastCorrect: wasCorrect,
+      spellingNotice: spellingNotice,
+      clearSpellingNotice: spellingNotice == null,
       correctCount: current.correctCount + (wasCorrect ? 1 : 0),
     ));
   }
@@ -218,6 +238,7 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
       currentIndex: nextIndex,
       clearLockedAnswer: true,
       clearWasLastCorrect: true,
+      clearSpellingNotice: true,
       hintRevealed: false,
     ));
   }

@@ -7,6 +7,34 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Added — Iteration 8 (vier Quiz-Formate)
+- **`QuizFormat`-Enum** mit vier Formaten, pro Session in der
+  Lesson-Detail-Card als `ChoiceChip` wählbar (☐ Auswählen,
+  ✎ Schreiben, 🎤 Sprechen, 👂 Hören & Sprechen).
+- **Schreiben** (`type`): Textfeld + Submit-Button. Auswertung über
+  `AnswerEvaluator`: strict-equal → ok; tolerant-equal (Großklein,
+  Apostrophe, Endpunkte, Whitespace egalisiert, **Diakritika strict**)
+  → ok mit Schreibweise-Hinweis „Achte auf die Schreibweise: …".
+- **Sprechen** (`speak`): Prompt-Text sichtbar; Mikrofon-Tap startet
+  STT (`speech_to_text`), Live-Transkript wird angezeigt, am Ende der
+  Erkennung als Antwort gewertet (gleicher Evaluator wie type).
+- **Hören & Sprechen** (`listenSpeak`): Prompt-Text **versteckt**, der
+  TTS-Engine spielt das Wort automatisch ab; tap auf die Hör-Karte
+  spielt erneut. Antwort via Mikrofon, Auswertung gleicher Evaluator.
+  Erst nach der Antwort wird der Prompt-Text eingeblendet.
+- **Feedback-Karte** unter der Antwort-Area: ✓ „Richtig!" / ✗
+  „Falsch." mit korrekter Lösung, Speaker-Button daneben (HR), bei
+  Schreibweise-Hinweis kursive Zeile darunter.
+- DB-Schema **v3**: `quiz_sessions.direction` (`de_hr` / `hr_de`)
+  ergänzt, Migration backfilled aus dem alten Mode-Suffix. Adaptive
+  Selektion und Highscore-Filter laufen jetzt richtungsbasiert, nicht
+  mehr modusabhängig — modusübergreifender Lernfortschritt.
+- AndroidManifest: `RECORD_AUDIO`-Permission + `<queries>`-Eintrag für
+  `android.speech.RecognitionService`.
+- Unit-Tests `test/answer_evaluator_test.dart` (8 Fälle) decken
+  strict/tolerant/wrong, Case-Insensitivity, Apostroph-Toleranz,
+  Whitespace-Normalisierung, Endpunkt-Toleranz und Diakritika-Strenge ab.
+
 ### Added — Iteration 7 (Sprachausgabe / TTS)
 - **`TtsService`** als dünner Wrapper um `flutter_tts`, mit lazy
   Engine-Init (Speech-Rate 0.45, Volume 1.0), kachiertem
