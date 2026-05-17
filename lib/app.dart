@@ -127,40 +127,48 @@ class _ErrorView extends StatelessWidget {
   }
 }
 
-class _LessonOverview extends StatelessWidget {
+class _LessonOverview extends ConsumerWidget {
   const _LessonOverview({required this.lessons, this.syncResult});
 
   final List<dynamic> lessons;
   final dynamic syncResult;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final totalItems = lessons.fold<int>(
       0,
       (sum, l) =>
           sum + ((l.wordCount + l.phraseCount + l.sentenceCount) as int),
     );
-    return CustomScrollView(
-      slivers: [
-        SliverToBoxAdapter(
-          child: _SyncBanner(syncResult: syncResult, totalItems: totalItems),
-        ),
-        if (lessons.isEmpty)
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: _EmptyState(syncResult: syncResult),
-          )
-        else
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            sliver: SliverList.builder(
-              itemCount: lessons.length,
-              itemBuilder: (context, index) =>
-                  _TopicCard(lesson: lessons[index]),
-            ),
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.invalidate(syncResultProvider);
+        await ref.read(cachedLessonsProvider.future);
+      },
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverToBoxAdapter(
+            child:
+                _SyncBanner(syncResult: syncResult, totalItems: totalItems),
           ),
-        const SliverToBoxAdapter(child: SizedBox(height: 24)),
-      ],
+          if (lessons.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: _EmptyState(syncResult: syncResult),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              sliver: SliverList.builder(
+                itemCount: lessons.length,
+                itemBuilder: (context, index) =>
+                    _TopicCard(lesson: lessons[index]),
+              ),
+            ),
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+        ],
+      ),
     );
   }
 }
@@ -203,7 +211,7 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 12),
           ],
           Text(
-            'Status oben prüfen, dann Refresh-Knopf in der Titelzeile.',
+            'Nach unten ziehen, um neu zu synchronisieren.',
             style: theme.textTheme.bodySmall,
             textAlign: TextAlign.center,
           ),

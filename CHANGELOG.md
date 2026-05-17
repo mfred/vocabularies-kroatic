@@ -7,6 +7,14 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Fixed — Iteration 5 Hotfix
+- **Sync fiel auf Offline-Cache zurück**: das in `advanced.json`
+  ausgelieferte `stages`-Array entsprach nicht dem Freezed-Schema
+  (`type` fehlte, `order` fremd). Das Freezed-Parsing flog deshalb,
+  die ganze Sync wurde gecatcht und als „fromCache" markiert.
+  Datenrepo-Hotfix `50f381a` korrigiert das Stages-Format, App-seitig
+  keine Änderung nötig.
+
 ### Added — Iteration 5 (Datenrepo-Erweiterung + Quiz-Politur)
 - **Neue Lektion „Fortgeschritten"** wird beim App-Start automatisch
   vom Manifest gezogen — 286 zusätzliche Items aus der eigenen
@@ -19,6 +27,10 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
   Vokabeltext steht jetzt nur noch der Text selbst — die Sprache ist
   durch die Richtungsanzeige in der AppBar (`🇩🇪→🇭🇷` / `🇭🇷→🇩🇪`) und
   die Richtungswahl im Lesson-Detail bereits klar.
+- **Pull-to-Refresh** auf dem Home-Screen: nach unten ziehen +
+  loslassen löst eine Re-Sync aus (`syncResultProvider` wird
+  invalidiert, `cachedLessonsProvider` neu aufgelöst). Ersetzt die
+  Funktion des in Iteration 4 entfernten Refresh-Icons in der AppBar.
 
 ### Added — Iteration 4 (Bestenliste-UI + Navigation)
 - **HighscoreScreen** mit 4 Tabs (Heute / Woche / Monat / Ewig). Pro
