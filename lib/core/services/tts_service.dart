@@ -23,6 +23,16 @@ class TtsService {
     _initialized = true;
   }
 
+  /// Drops the cached availability for one language (or all if null).
+  /// The next [isAvailable] call will re-query the engine.
+  void invalidate([String? langTag]) {
+    if (langTag == null) {
+      _availability.clear();
+    } else {
+      _availability.remove(langTag);
+    }
+  }
+
   Future<bool> isAvailable(String langTag) async {
     final cached = _availability[langTag];
     if (cached != null) return cached;

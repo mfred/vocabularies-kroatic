@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/missing_language_dialog.dart';
 import '../../../shared/providers.dart';
 
 class QuizMicInput extends ConsumerStatefulWidget {
@@ -38,6 +39,18 @@ class _QuizMicInputState extends ConsumerState<QuizMicInput> {
     final ok = await svc.hasLocale(widget.langTag);
     if (!mounted) return;
     setState(() => _localeAvailable = ok);
+  }
+
+  Future<void> _openInstallDialog() async {
+    await showMissingLanguageDialog(
+      context,
+      LanguageFeature.stt,
+      widget.langTag,
+    );
+    if (!mounted) return;
+    ref.read(sttServiceProvider).invalidate();
+    setState(() => _localeAvailable = null);
+    await _checkLocale();
   }
 
   Future<void> _toggle() async {
@@ -135,6 +148,18 @@ class _QuizMicInputState extends ConsumerState<QuizMicInput> {
             ],
           ),
         ),
+        if (_localeAvailable == false)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: FilledButton.tonalIcon(
+                onPressed: _openInstallDialog,
+                icon: const Icon(Icons.download_outlined),
+                label: const Text('Sprache installieren'),
+              ),
+            ),
+          ),
         if (_error != null)
           Padding(
             padding: const EdgeInsets.only(top: 6),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shared/providers.dart';
+import 'missing_language_dialog.dart';
 
 class SpeakButton extends ConsumerStatefulWidget {
   const SpeakButton({
@@ -52,6 +53,18 @@ class _SpeakButtonState extends ConsumerState<SpeakButton> {
     }
   }
 
+  Future<void> _onPressedWhileDisabled() async {
+    await showMissingLanguageDialog(
+      context,
+      LanguageFeature.tts,
+      widget.langTag,
+    );
+    if (!mounted) return;
+    ref.read(ttsServiceProvider).invalidate(widget.langTag);
+    setState(() => _available = null);
+    await _resolveAvailability();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -62,13 +75,13 @@ class _SpeakButtonState extends ConsumerState<SpeakButton> {
     return IconButton(
       tooltip: widget.tooltip ??
           (disabled
-              ? 'Sprache nicht verfügbar (${widget.langTag})'
+              ? 'Sprache (${widget.langTag}) nicht installiert — tippen für Hilfe'
               : 'Aussprechen'),
       iconSize: widget.size,
       visualDensity: VisualDensity.compact,
       padding: const EdgeInsets.all(4),
       constraints: const BoxConstraints.tightFor(width: 36, height: 36),
-      onPressed: disabled ? null : _onPressed,
+      onPressed: disabled ? _onPressedWhileDisabled : _onPressed,
       icon: Icon(
         disabled
             ? Icons.volume_off_outlined

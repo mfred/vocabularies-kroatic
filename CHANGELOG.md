@@ -7,6 +7,24 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Added — Iteration 9 („Sprache installieren"-Deep-Link)
+- Tap auf einen disabled-Lautsprecher-Button öffnet jetzt einen
+  `MissingLanguageDialog` mit Erklärung + Buttons „Sprachdienste
+  öffnen" (Android-Intent `com.android.settings.TTS_SETTINGS`) und
+  „Im Play Store" (`market://details?id=com.google.android.tts`).
+- Im Quiz-Modus „Sprechen" / „Hören + Sprechen" zeigt das Mikrofon-
+  Widget bei fehlendem STT-Sprachpaket einen `FilledButton.tonalIcon`
+  „Sprache installieren". Tap öffnet den Dialog mit
+  `android.settings.VOICE_INPUT_SETTINGS` und Play-Store-Listing der
+  Google-App als Optionen.
+- Neue Service-Klasse `SystemIntents` bündelt Android-Intents zentral.
+  Auf nicht-Android-Plattformen sind die Helper No-ops.
+- `TtsService.invalidate([langTag])` und `SttService.invalidate()`
+  verwerfen die Verfügbarkeits-Caches, damit nach manueller
+  Installation der Sprache der Knopf beim nächsten Tap wieder aktiv
+  wird, ohne App-Neustart.
+- Neue Abhängigkeit: `android_intent_plus: ^5.3.0`.
+
 ### Added — Iteration 8 (vier Quiz-Formate)
 - **`QuizFormat`-Enum** mit vier Formaten, pro Session in der
   Lesson-Detail-Card als `ChoiceChip` wählbar (☐ Auswählen,

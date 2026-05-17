@@ -16,6 +16,13 @@ class SttService {
   final stt.SpeechToText _stt = stt.SpeechToText();
   bool? _initialized;
 
+  /// Drops the init-state cache so the next [initialize] / [hasLocale]
+  /// re-queries the platform plugin (e.g. after the user installed a
+  /// missing locale via system settings).
+  void invalidate() {
+    _initialized = null;
+  }
+
   Future<bool> initialize() async {
     if (_initialized == true) return true;
     if (_initialized == false) return false;
