@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:speech_to_text/speech_recognition_error.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
@@ -10,15 +11,21 @@ class SttResult {
 }
 
 /// Wraps `speech_to_text` for short, locale-targeted recognitions.
+///
+/// Recognition always runs **online** (`onDevice: false`). Offline
+/// language packs for STT are not installable for many locales
+/// (Croatian among them), and the Android `SpeechRecognizer` falls
+/// back to Google's network recognizer just fine — no per-user
+/// install needed.
 class SttService {
   SttService();
 
   final stt.SpeechToText _stt = stt.SpeechToText();
   bool? _initialized;
+  void Function(String)? _activeOnError;
 
-  /// Drops the init-state cache so the next [initialize] / [hasLocale]
-  /// re-queries the platform plugin (e.g. after the user installed a
-  /// missing locale via system settings).
+  /// Drops the init-state cache so the next [initialize] re-queries
+  /// the platform plugin.
   void invalidate() {
     _initialized = null;
   }
@@ -28,7 +35,9 @@ class SttService {
     if (_initialized == false) return false;
     try {
       _initialized = await _stt.initialize(
-        onError: (_) {},
+        onError: (SpeechRecognitionError err) {
+          _activeOnError?.call(err.errorMsg);
+        },
         onStatus: (_) {},
         debugLogging: false,
       );
@@ -40,40 +49,47 @@ class SttService {
 
   bool get isListening => _stt.isListening;
 
-  Future<bool> hasLocale(String localeId) async {
-    if (!await initialize()) return false;
-    final locales = await _stt.locales();
-    return locales.any((l) =>
-        l.localeId.toLowerCase() == localeId.toLowerCase() ||
-        l.localeId.toLowerCase().replaceAll('-', '_') ==
-            localeId.toLowerCase().replaceAll('-', '_'));
-  }
-
   Future<void> start({
     required String localeId,
     required void Function(SttResult) onResult,
+    void Function(String)? onError,
     Duration listenFor = const Duration(seconds: 10),
     Duration pauseFor = const Duration(seconds: 3),
   }) async {
-    if (!await initialize()) return;
-    await _stt.listen(
-      localeId: localeId.replaceAll('-', '_'),
-      listenFor: listenFor,
-      pauseFor: pauseFor,
-      onResult: (SpeechRecognitionResult r) {
-        onResult(SttResult(
-          text: r.recognizedWords,
-          isFinal: r.finalResult,
-        ));
-      },
-    );
+    if (!await initialize()) {
+      if (onError != null) onError('not_available');
+      return;
+    }
+    _activeOnError = onError;
+    try {
+      await _stt.listen(
+        localeId: localeId.replaceAll('-', '_'),
+        listenFor: listenFor,
+        pauseFor: pauseFor,
+        listenOptions: stt.SpeechListenOptions(
+          onDevice: false,
+          partialResults: true,
+          cancelOnError: true,
+        ),
+        onResult: (SpeechRecognitionResult r) {
+          onResult(SttResult(
+            text: r.recognizedWords,
+            isFinal: r.finalResult,
+          ));
+        },
+      );
+    } catch (e) {
+      if (onError != null) onError(e.toString());
+    }
   }
 
   Future<void> stop() async {
     if (_stt.isListening) await _stt.stop();
+    _activeOnError = null;
   }
 
   Future<void> cancel() async {
     if (_stt.isListening) await _stt.cancel();
+    _activeOnError = null;
   }
 }

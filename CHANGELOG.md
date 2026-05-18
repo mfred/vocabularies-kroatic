@@ -7,6 +7,38 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Changed — Iteration 12 (STT läuft online, kein Install-Pfad mehr)
+- **STT-Pre-Check entfernt**: bisher prüfte die App via
+  `speech_to_text.locales()`, ob das Ziel-Locale (hr-HR) bekannt
+  ist, und deaktivierte das Mikro andernfalls. Die Liste reflektiert
+  jedoch nur **installierte Offline-Pakete**. Kroatisch ist auf den
+  meisten Geräten gar nicht als Offline-Paket downloadbar — die
+  Prüfung lieferte daher false-negatives und blockierte das Mikro
+  grundlos, obwohl Online-STT für hr problemlos läuft.
+- **Mikro immer klickbar**: keine `_localeAvailable`-State-Maschine
+  mehr in `QuizMicInput`, kein „Sprache installieren"-CTA. Der
+  Nutzer probiert direkt; bei Recognizer-Fehler erscheint
+  ein Inline-Hinweis „Spracherkennung läuft online — bitte
+  Internetverbindung prüfen."
+- **`SpeechListenOptions(onDevice: false)`** explizit gesetzt in
+  `SttService.start`, damit die Online-Intention im Code sichtbar
+  ist (war vorher das Default-Verhalten der deprecated Parameter).
+  `cancelOnError: true` sorgt dafür, dass eine fehlgeschlagene
+  Session sauber endet.
+- **`SttService.hasLocale`/`_langPrefix` gelöscht** (kein Aufrufer
+  mehr); `_activeOnError`-Bridge reicht Plugin-Fehler aus
+  `initialize.onError` an den aktiven `start`-Call durch.
+- **Aufräumen**: `MissingLanguageDialog` ist jetzt TTS-only
+  (`showMissingTtsLanguageDialog`). STT-Branch, `LanguageFeature`-
+  Enum, `SystemIntents.openSttRecognitionSettings`,
+  `openVoiceInputSettings` und `openInputMethodSettings` entfernt.
+  Das AndroidManifest-`<queries>`-Element listet nur noch die
+  TTS-relevanten Packages (`com.google.android.tts`,
+  `com.google.android.googlequicksearchbox`).
+- **TTS-Pfad unverändert** — dort ist Install-UX weiter sinnvoll,
+  weil Kroatisch als TTS-Stimme tatsächlich per Google TTS
+  installierbar ist.
+
 ### Changed — Iteration 11 (bessere Deep-Links für „Sprache installieren")
 - **STT-Dialog**: `VOICE_INPUT_SETTINGS` führte auf „Digitale
   Assistenz-App" (falsche Seite). Ersetzt durch

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/widgets/missing_language_dialog.dart';
 import '../../../shared/providers.dart';
 
 class QuizMicInput extends ConsumerStatefulWidget {
@@ -26,32 +25,6 @@ class _QuizMicInputState extends ConsumerState<QuizMicInput> {
   bool _listening = false;
   String _liveTranscript = '';
   String? _error;
-  bool? _localeAvailable;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkLocale();
-  }
-
-  Future<void> _checkLocale() async {
-    final svc = ref.read(sttServiceProvider);
-    final ok = await svc.hasLocale(widget.langTag);
-    if (!mounted) return;
-    setState(() => _localeAvailable = ok);
-  }
-
-  Future<void> _openInstallDialog() async {
-    await showMissingLanguageDialog(
-      context,
-      LanguageFeature.stt,
-      widget.langTag,
-    );
-    if (!mounted) return;
-    ref.read(sttServiceProvider).invalidate();
-    setState(() => _localeAvailable = null);
-    await _checkLocale();
-  }
 
   Future<void> _toggle() async {
     final svc = ref.read(sttServiceProvider);
@@ -84,6 +57,15 @@ class _QuizMicInputState extends ConsumerState<QuizMicInput> {
           }
         }
       },
+      onError: (msg) {
+        if (!mounted) return;
+        setState(() {
+          _listening = false;
+          _error = 'Spracherkennung fehlgeschlagen — '
+              'Spracherkennung läuft online, '
+              'bitte Internetverbindung prüfen.';
+        });
+      },
     );
   }
 
@@ -91,7 +73,7 @@ class _QuizMicInputState extends ConsumerState<QuizMicInput> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final disabled = widget.locked || _localeAvailable == false;
+    final disabled = widget.locked;
     final showLive = _listening && _liveTranscript.isNotEmpty;
     final shownText = widget.locked
         ? (widget.lastInput ?? '')
@@ -120,9 +102,8 @@ class _QuizMicInputState extends ConsumerState<QuizMicInput> {
                 color:
                     _listening ? scheme.primary : scheme.onSurfaceVariant,
                 icon: Icon(_listening ? Icons.stop_circle : Icons.mic),
-                tooltip: _localeAvailable == false
-                    ? 'Sprache (${widget.langTag}) nicht installiert'
-                    : (_listening ? 'Aufnahme stoppen' : 'Aufnahme starten'),
+                tooltip:
+                    _listening ? 'Aufnahme stoppen' : 'Aufnahme starten',
               ),
               const SizedBox(width: 4),
               Expanded(
@@ -130,10 +111,7 @@ class _QuizMicInputState extends ConsumerState<QuizMicInput> {
                   shownText.isEmpty
                       ? (_listening
                           ? 'Bitte sprechen …'
-                          : (_localeAvailable == false
-                              ? 'STT für ${widget.langTag} '
-                                  'nicht installiert'
-                              : 'Tippe auf das Mikro und sprich die Antwort'))
+                          : 'Tippe auf das Mikro und sprich die Antwort')
                       : shownText,
                   style: theme.textTheme.bodyLarge?.copyWith(
                     color: shownText.isEmpty
@@ -148,18 +126,6 @@ class _QuizMicInputState extends ConsumerState<QuizMicInput> {
             ],
           ),
         ),
-        if (_localeAvailable == false)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: FilledButton.tonalIcon(
-                onPressed: _openInstallDialog,
-                icon: const Icon(Icons.download_outlined),
-                label: const Text('Sprache installieren'),
-              ),
-            ),
-          ),
         if (_error != null)
           Padding(
             padding: const EdgeInsets.only(top: 6),

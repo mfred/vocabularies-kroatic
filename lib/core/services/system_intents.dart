@@ -8,24 +8,10 @@ import 'package:android_intent_plus/android_intent.dart';
 class SystemIntents {
   const SystemIntents._();
 
-  static Future<void> openVoiceInputSettings() async {
-    if (!Platform.isAndroid) return;
-    const intent =
-        AndroidIntent(action: 'android.settings.VOICE_INPUT_SETTINGS');
-    await intent.launch();
-  }
-
   static Future<void> openTtsSettings() async {
     if (!Platform.isAndroid) return;
     const intent =
         AndroidIntent(action: 'com.android.settings.TTS_SETTINGS');
-    await intent.launch();
-  }
-
-  static Future<void> openInputMethodSettings() async {
-    if (!Platform.isAndroid) return;
-    const intent =
-        AndroidIntent(action: 'android.settings.INPUT_METHOD_SETTINGS');
     await intent.launch();
   }
 

@@ -2,29 +2,21 @@ import 'package:flutter/material.dart';
 
 import '../services/system_intents.dart';
 
-enum LanguageFeature { tts, stt }
-
-Future<void> showMissingLanguageDialog(
+Future<void> showMissingTtsLanguageDialog(
   BuildContext context,
-  LanguageFeature feature,
   String langTag,
 ) {
-  final isTts = feature == LanguageFeature.tts;
   return showDialog<void>(
     context: context,
     builder: (ctx) {
       final theme = Theme.of(ctx);
       return AlertDialog(
-        title: Text(
-          isTts ? 'Sprachausgabe fehlt' : 'Spracherkennung fehlt',
-        ),
+        title: const Text('Sprachausgabe fehlt'),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
-            children: isTts
-                ? _ttsContent(theme, langTag, ctx)
-                : _sttContent(theme, langTag, ctx),
+            children: _ttsContent(theme, langTag, ctx),
           ),
         ),
         actions: [
@@ -33,11 +25,8 @@ Future<void> showMissingLanguageDialog(
             child: const Text('Schließen'),
           ),
           TextButton(
-            onPressed: () => SystemIntents.openPlayStorePackage(
-              isTts
-                  ? 'com.google.android.tts'
-                  : 'com.google.android.googlequicksearchbox',
-            ),
+            onPressed: () =>
+                SystemIntents.openPlayStorePackage('com.google.android.tts'),
             child: const Text('Im Play Store'),
           ),
         ],
@@ -90,74 +79,6 @@ List<Widget> _ttsContent(
       filled: false,
       onTap: () async {
         await SystemIntents.openAppInfo('com.google.android.tts');
-        if (ctx.mounted) Navigator.of(ctx).pop();
-      },
-    ),
-  ];
-}
-
-List<Widget> _sttContent(
-  ThemeData theme,
-  String langTag,
-  BuildContext ctx,
-) {
-  return [
-    Text(
-      'Das Offline-Sprachpaket für $langTag ist nicht installiert.',
-      style: theme.textTheme.bodyMedium,
-    ),
-    const SizedBox(height: 8),
-    Text(
-      'Android öffnet keine direkte „Installieren"-Seite. So findest du sie:',
-      style: theme.textTheme.bodySmall?.copyWith(
-        color: theme.colorScheme.onSurfaceVariant,
-      ),
-    ),
-    const SizedBox(height: 10),
-    Text(
-      'Über die Tastatur (Gboard):',
-      style: theme.textTheme.titleSmall?.copyWith(
-        fontWeight: FontWeight.w700,
-      ),
-    ),
-    const SizedBox(height: 4),
-    const _Step(n: 1, text: '„Tastatureinstellungen" antippen'),
-    const _Step(
-      n: 2,
-      text: 'Gboard → Spracheingabe → Offline-Spracherkennung',
-    ),
-    const _Step(n: 3, text: '„Sprachen" → Hrvatski herunterladen'),
-    const SizedBox(height: 10),
-    Text(
-      'Oder über die Google-App:',
-      style: theme.textTheme.titleSmall?.copyWith(
-        fontWeight: FontWeight.w700,
-      ),
-    ),
-    const SizedBox(height: 4),
-    const _Step(n: 1, text: '„Google-App öffnen"'),
-    const _Step(n: 2, text: 'Profil (oben rechts) → Einstellungen'),
-    const _Step(
-      n: 3,
-      text: 'Spracheinstellungen → Offline-Spracherkennung',
-    ),
-    const SizedBox(height: 14),
-    _ActionButton(
-      icon: Icons.keyboard,
-      label: 'Tastatureinstellungen',
-      onTap: () async {
-        await SystemIntents.openInputMethodSettings();
-        if (ctx.mounted) Navigator.of(ctx).pop();
-      },
-    ),
-    const SizedBox(height: 8),
-    _ActionButton(
-      icon: Icons.g_mobiledata,
-      label: 'Google-App öffnen',
-      filled: false,
-      onTap: () async {
-        await SystemIntents.openPackageLaunch(
-            'com.google.android.googlequicksearchbox');
         if (ctx.mounted) Navigator.of(ctx).pop();
       },
     ),

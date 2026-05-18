@@ -54,11 +54,7 @@ class _SpeakButtonState extends ConsumerState<SpeakButton> {
   }
 
   Future<void> _onPressedWhileDisabled() async {
-    await showMissingLanguageDialog(
-      context,
-      LanguageFeature.tts,
-      widget.langTag,
-    );
+    await showMissingTtsLanguageDialog(context, widget.langTag);
     if (!mounted) return;
     ref.read(ttsServiceProvider).invalidate(widget.langTag);
     setState(() => _available = null);
