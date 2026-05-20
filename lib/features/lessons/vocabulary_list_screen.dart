@@ -4,57 +4,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/database/database.dart';
 import '../../core/widgets/speak_button.dart';
 import '../../shared/providers.dart';
-import '../quiz/models/quiz_direction.dart';
-import '../quiz/models/quiz_format.dart';
-import '../quiz/screens/quiz_screen.dart';
 
-class LessonDetailScreen extends ConsumerStatefulWidget {
-  const LessonDetailScreen({super.key, required this.lesson});
+class VocabularyListScreen extends ConsumerStatefulWidget {
+  const VocabularyListScreen({super.key, required this.lesson});
 
   final LessonsCacheData lesson;
 
   @override
-  ConsumerState<LessonDetailScreen> createState() =>
-      _LessonDetailScreenState();
+  ConsumerState<VocabularyListScreen> createState() =>
+      _VocabularyListScreenState();
 }
 
-class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
+class _VocabularyListScreenState extends ConsumerState<VocabularyListScreen> {
   String _stage = 'words';
-  QuizDirection _direction = QuizDirection.deToHr;
-  QuizFormat _format = QuizFormat.multipleChoice;
-
-  int get _totalItems =>
-      widget.lesson.wordCount +
-      widget.lesson.phraseCount +
-      widget.lesson.sentenceCount;
-
-  bool get _canStartQuiz => _totalItems >= 4;
-
-  IconData _iconForFormat(QuizFormat f) {
-    switch (f) {
-      case QuizFormat.multipleChoice:
-        return Icons.check_box_outlined;
-      case QuizFormat.type:
-        return Icons.edit_outlined;
-      case QuizFormat.speak:
-        return Icons.mic_none_outlined;
-      case QuizFormat.listenSpeak:
-        return Icons.hearing;
-    }
-  }
-
-  void _startQuiz() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => QuizScreen(
-          lessonId: widget.lesson.lessonId,
-          lessonTitle: widget.lesson.titleDe,
-          direction: _direction,
-          format: _format,
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +42,7 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: SegmentedButton<String>(
               segments: [
                 ButtonSegment(
@@ -103,98 +65,6 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
               showSelectedIcon: false,
               onSelectionChanged: (set) =>
                   setState(() => _stage = set.first),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(14),
-                border:
-                    Border.all(color: theme.colorScheme.outlineVariant),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        'Quiz-Richtung',
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const Spacer(),
-                      SegmentedButton<QuizDirection>(
-                        segments: const [
-                          ButtonSegment(
-                            value: QuizDirection.deToHr,
-                            label: Text('🇩🇪 → 🇭🇷'),
-                          ),
-                          ButtonSegment(
-                            value: QuizDirection.hrToDe,
-                            label: Text('🇭🇷 → 🇩🇪'),
-                          ),
-                        ],
-                        selected: {_direction},
-                        showSelectedIcon: false,
-                        style: SegmentedButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                        ),
-                        onSelectionChanged: (set) =>
-                            setState(() => _direction = set.first),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Format',
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  SizedBox(
-                    width: double.infinity,
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      children: [
-                        for (final f in QuizFormat.values)
-                          ChoiceChip(
-                            label: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(_iconForFormat(f), size: 16),
-                                const SizedBox(width: 6),
-                                Text(f.label),
-                              ],
-                            ),
-                            selected: _format == f,
-                            onSelected: (_) =>
-                                setState(() => _format = f),
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  FilledButton.icon(
-                    onPressed: _canStartQuiz ? _startQuiz : null,
-                    icon: const Icon(Icons.play_arrow),
-                    label: Text(
-                      _canStartQuiz
-                          ? 'Quiz starten (10)'
-                          : 'Zu wenige Items für ein Quiz',
-                    ),
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                  ),
-                ],
-              ),
             ),
           ),
           Expanded(

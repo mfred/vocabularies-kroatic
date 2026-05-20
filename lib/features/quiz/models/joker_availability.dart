@@ -15,6 +15,8 @@ bool jokerAvailable(
       return format == QuizFormat.multipleChoice &&
           question.options.length >= 4;
     case JokerType.picture:
+      // Nur wenn für die Vokabel ein Icon-Mapping existiert; ohne Bild
+      // wird der Joker nicht angeboten.
       return question.pictureIcon != null;
   }
 }

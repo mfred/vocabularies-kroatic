@@ -54,9 +54,21 @@ class Players extends Table {
   IntColumn get createdAt => integer()();
   BoolColumn get isLocal => boolean().withDefault(const Constant(true))();
   TextColumn get remoteUserId => text().nullable()();
+  IntColumn get pendingBonusPoints =>
+      integer().withDefault(const Constant(0))();
 
   @override
   Set<Column> get primaryKey => {id};
+}
+
+class StreakRewards extends Table {
+  TextColumn get playerId => text().references(Players, #id)();
+  IntColumn get streakDay => integer()();
+  IntColumn get claimedAt => integer()();
+  IntColumn get bonusPoints => integer()();
+
+  @override
+  Set<Column> get primaryKey => {playerId, streakDay};
 }
 
 class QuizSessions extends Table {
@@ -93,12 +105,19 @@ class QuizAttempts extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-@DriftDatabase(tables: [Items, LessonsCache, Players, QuizSessions, QuizAttempts])
+@DriftDatabase(tables: [
+  Items,
+  LessonsCache,
+  Players,
+  QuizSessions,
+  QuizAttempts,
+  StreakRewards,
+])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -111,7 +130,6 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 3) {
             await m.addColumn(quizSessions, quizSessions.direction);
-            // Backfill direction aus dem alten mode-Suffix.
             await customStatement(
               "UPDATE quiz_sessions SET direction = "
               "CASE WHEN mode LIKE '%_hr_de' THEN 'hr_de' "
@@ -120,6 +138,10 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 4) {
             await m.addColumn(quizAttempts, quizAttempts.jokersJson);
+          }
+          if (from < 5) {
+            await m.addColumn(players, players.pendingBonusPoints);
+            await m.createTable(streakRewards);
           }
         },
       );
@@ -298,6 +320,54 @@ class AppDatabase extends _$AppDatabase {
       q.where((t) => t.lessonId.equals(lessonId));
     }
     return q.get();
+  }
+
+  Future<List<int>> finishedAtsForPlayer(String playerId) async {
+    final q = selectOnly(quizSessions)
+      ..addColumns([quizSessions.finishedAt])
+      ..where(quizSessions.playerId.equals(playerId) &
+          quizSessions.finishedAt.isNotNull())
+      ..orderBy([
+        OrderingTerm(
+            expression: quizSessions.finishedAt,
+            mode: OrderingMode.desc),
+      ]);
+    final rows = await q.get();
+    return rows
+        .map((r) => r.read(quizSessions.finishedAt))
+        .whereType<int>()
+        .toList();
+  }
+
+  Future<bool> hasClaimedStreakReward(String playerId, int streakDay) async {
+    final row = await (select(streakRewards)
+          ..where((t) =>
+              t.playerId.equals(playerId) & t.streakDay.equals(streakDay)))
+        .getSingleOrNull();
+    return row != null;
+  }
+
+  Future<void> insertStreakReward(StreakRewardsCompanion entry) {
+    return into(streakRewards).insert(entry);
+  }
+
+  Future<int> getPendingBonusPoints(String playerId) async {
+    final row = await (select(players)..where((t) => t.id.equals(playerId)))
+        .getSingleOrNull();
+    return row?.pendingBonusPoints ?? 0;
+  }
+
+  Future<void> addPendingBonusPoints(String playerId, int points) async {
+    await customStatement(
+      'UPDATE players SET pending_bonus_points = pending_bonus_points + ? '
+      'WHERE id = ?',
+      [points, playerId],
+    );
+  }
+
+  Future<void> clearPendingBonusPoints(String playerId) async {
+    await (update(players)..where((t) => t.id.equals(playerId)))
+        .write(const PlayersCompanion(pendingBonusPoints: Value(0)));
   }
 
   Future<List<DetailedSessionRow>> topSessionsDetailed({

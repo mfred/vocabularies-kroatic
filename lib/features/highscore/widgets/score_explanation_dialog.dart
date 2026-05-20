@@ -28,10 +28,14 @@ Future<void> showScoreExplanationDialog(BuildContext context) {
                   '0 s → +600, 1 min → +540, 5 min → +300, '
                   '10 min und mehr → 0.',
             ),
-            const _Bullet(text: 'Lautschrift-Joker: −5 P pro Nutzung.'),
-            const _Bullet(text: '50/50-Joker: −15 P pro Nutzung.'),
-            const _Bullet(text: 'Bild-Joker: −5 P pro Nutzung.'),
+            const _Bullet(text: 'Lautschrift-Joker: −15 P pro Nutzung.'),
+            const _Bullet(text: '50/50-Joker: −5 P pro Nutzung.'),
+            const _Bullet(text: 'Bild-Joker: −10 P pro Nutzung.'),
             const _Bullet(text: 'Negative Summen werden auf 0 gesetzt.'),
+            const _Bullet(
+              text: 'Bestenliste: pro Spieler werden alle Punkte über '
+                  'alle Spiele im gewählten Zeitraum summiert.',
+            ),
             const SizedBox(height: 14),
             Container(
               padding: const EdgeInsets.all(12),

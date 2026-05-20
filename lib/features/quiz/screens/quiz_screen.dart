@@ -169,38 +169,57 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              QuizProgressBar(
-                total: state.totalQuestions,
-                currentIndex: state.currentIndex,
-                correctMask: _correctMask,
-              ),
-              const SizedBox(height: 8),
-              Center(
-                child: Text(
-                  'Frage ${state.currentIndex + 1} / ${state.totalQuestions}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      QuizProgressBar(
+                        total: state.totalQuestions,
+                        currentIndex: state.currentIndex,
+                        correctMask: _correctMask,
+                      ),
+                      const SizedBox(height: 8),
+                      Center(
+                        child: Text(
+                          'Frage ${state.currentIndex + 1} / ${state.totalQuestions}',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      if (widget.format == QuizFormat.listenSpeak &&
+                          !state.isAnswered)
+                        _ListenPrompt(
+                          langTag: question.direction.promptLangTag,
+                          text: question.prompt,
+                          onTap: () => _playPrompt(question),
+                        )
+                      else
+                        _PromptCard(
+                          text: question.prompt,
+                          langTag: question.direction.promptLangTag,
+                        ),
+                      if (state.usedJokersThisQuestion
+                              .contains(JokerType.ipa) ||
+                          state.usedJokersThisQuestion
+                              .contains(JokerType.picture)) ...[
+                        const SizedBox(height: 12),
+                        JokerReveals(
+                          question: question,
+                          usedJokers: state.usedJokersThisQuestion,
+                        ),
+                      ],
+                      const SizedBox(height: 18),
+                      _buildAnswerArea(state, question),
+                      if (state.isAnswered)
+                        _AnswerFeedback(state: state, question: question),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              if (widget.format == QuizFormat.listenSpeak &&
-                  !state.isAnswered)
-                _ListenPrompt(
-                  langTag: question.direction.promptLangTag,
-                  text: question.prompt,
-                  onTap: () => _playPrompt(question),
-                )
-              else
-                _PromptCard(
-                  text: question.prompt,
-                  langTag: question.direction.promptLangTag,
-                ),
-              const SizedBox(height: 18),
-              _buildAnswerArea(state, question),
-              if (state.isAnswered)
-                _AnswerFeedback(state: state, question: question),
-              const Spacer(),
+              const SizedBox(height: 12),
               JokerBar(
                 question: question,
                 format: widget.format,
@@ -210,8 +229,8 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                     .read(quizSessionControllerProvider(_args).notifier)
                     .useJoker(j),
               ),
-              const SizedBox(height: 12),
-              if (state.isAnswered && state.wasLastCorrect == false)
+              if (state.isAnswered && state.wasLastCorrect == false) ...[
+                const SizedBox(height: 12),
                 FilledButton.icon(
                   onPressed: () => _advance(),
                   icon: const Icon(Icons.arrow_forward),
@@ -220,6 +239,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                 ),
+              ],
             ],
           ),
         ),
@@ -240,11 +260,16 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                   state: state,
                 );
                 final disabled = state.isAnswered ||
-                    optState == QuizOptionState.dimmed;
+                    optState == QuizOptionState.dimmed ||
+                    optState == QuizOptionState.eliminated;
                 return QuizOptionButton(
                   label: opt,
                   state: optState,
                   onTap: disabled ? null : () => _handleAnswer(opt, state),
+                  onSpeak: () => ref.read(ttsServiceProvider).speak(
+                        opt,
+                        question.direction.answerLangTag,
+                      ),
                 );
               }),
           ],
@@ -292,7 +317,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
           sessionId: state.sessionId,
           questionOrder: state.currentIndex,
         );
-        if (dimmed.contains(option)) return QuizOptionState.dimmed;
+        if (dimmed.contains(option)) return QuizOptionState.eliminated;
       }
       return QuizOptionState.neutral;
     }
@@ -305,6 +330,10 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
     final controller =
         ref.read(quizSessionControllerProvider(_args).notifier);
     await controller.answer(picked);
+    if (!mounted) return;
+    // Tastatur einfahren, damit der Weiter-Button bei falscher Antwort
+    // sichtbar bleibt (Schreiben/Sprechen-Modus).
+    FocusScope.of(context).unfocus();
     final updated = ref.read(quizSessionControllerProvider(_args)).value;
     if (updated == null) return;
     setState(() {

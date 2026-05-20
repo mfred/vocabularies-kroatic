@@ -1,0 +1,23 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Globale Bestenliste — jeder kann lesen, jeder Eingeloggte schreibt
+    // nur seinen eigenen Score (uid muss passen). Keine Edits / Deletes.
+    match /scores/{sessionId} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.uid
+        && request.resource.data.scorePoints is int
+        && request.resource.data.scorePoints >= 0
+        && request.resource.data.lessonId is string
+        && request.resource.data.direction is string
+        && request.resource.data.format is string
+        && request.resource.data.correctCount is int
+        && request.resource.data.totalCount is int
+        && request.resource.data.durationMs is int
+        && request.resource.data.hintsUsed is int
+        && request.resource.data.finishedAt is timestamp;
+      allow update, delete: if false;
+    }
+  }
+}

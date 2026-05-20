@@ -6,7 +6,8 @@ import 'package:uuid/uuid.dart';
 
 import 'dart:convert';
 
-import '../../../core/database/database.dart';
+import '../../../core/database/database.dart' hide StreakReward;
+import '../../../shared/firebase_status.dart';
 import '../../../shared/providers.dart';
 import '../models/joker_type.dart';
 import '../models/quiz_direction.dart';
@@ -192,7 +193,8 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
   void useJoker(JokerType joker) {
     final current = state.value;
     if (current == null || current.isAnswered) return;
-    if (current.usedJokersThisQuestion.contains(joker)) return;
+    // Max. ein Joker pro Frage.
+    if (current.usedJokersThisQuestion.isNotEmpty) return;
     final next = {...current.usedJokersThisQuestion, joker};
     state = AsyncData(current.copyWith(
       usedJokersThisQuestion: next,
@@ -267,12 +269,15 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
     final now = DateTime.now().millisecondsSinceEpoch;
     final durationMs = now - current.startedAt;
     final durationSeconds = durationMs ~/ 1000;
-    final score = computeScore(
+    final baseScore = computeScore(
       correctCount: current.correctCount,
       durationSeconds: durationSeconds,
       jokerCost: current.jokerCostTotal,
     );
     final db = ref.read(databaseProvider);
+    final player = await ref.read(currentPlayerProvider.future);
+    final pendingBonus = await db.getPendingBonusPoints(player.id);
+    final finalScore = baseScore + pendingBonus;
     await db.finalizeQuizSession(
       sessionId: current.sessionId,
       finishedAt: now,
@@ -280,12 +285,33 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
       correctCount: current.correctCount,
       totalCount: current.questions.length,
       hintsUsed: current.jokersUsedTotal,
-      scorePoints: score,
+      scorePoints: finalScore,
     );
+    if (pendingBonus > 0) {
+      await db.clearPendingBonusPoints(player.id);
+    }
     state = AsyncData(current.copyWith(
       isFinished: true,
       elapsedSeconds: durationSeconds,
     ));
+    // Streak könnte sich nach Session geändert haben (neuer Tag).
+    ref.invalidate(currentStreakProvider);
+    // Reward erst NACH der Wertung dieser Session prüfen — sonst würde der
+    // Bonus für genau diese Session schon mit eingerechnet.
+    ref.invalidate(streakRewardCheckProvider);
+    // Falls eingeloggt: Score in den globalen Leaderboard hochladen.
+    // Fire & forget — Offline-first, kein UI-Block bei Fehler.
+    if (FirebaseStatus.instance.isReady &&
+        ref.read(firebaseAuthProvider).currentUser != null) {
+      unawaited(
+        ref
+            .read(remoteLeaderboardServiceProvider)
+            .uploadSession(current.sessionId)
+            .catchError((Object e) {
+          // Schluck den Fehler — Score bleibt lokal, das ist ok.
+        }),
+      );
+    }
   }
 }
 

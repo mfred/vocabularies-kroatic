@@ -3,9 +3,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'core/database/database.dart';
+import 'core/database/database.dart' hide StreakReward;
+import 'features/auth/screens/login_screen.dart';
+import 'features/auth/screens/profile_screen.dart';
 import 'features/highscore/screens/highscore_screen.dart';
-import 'features/lessons/lesson_detail_screen.dart';
+import 'features/lessons/lesson_menu_screen.dart';
+import 'features/quiz/models/quiz_direction.dart';
+import 'features/streaks/models/streak_reward.dart';
+import 'shared/app_info.dart';
+import 'shared/firebase_status.dart';
 import 'shared/providers.dart';
 
 const Map<String, IconData> _topicIcons = {
@@ -47,17 +53,42 @@ class SyncStatusScreen extends ConsumerWidget {
     final lessonsAsync = ref.watch(cachedLessonsProvider);
     final syncAsync = ref.watch(syncResultProvider);
 
+    final direction = ref.watch(preferredDirectionProvider);
+    final isDeHr = direction == QuizDirection.deToHr;
+    final flagDisplay = isDeHr ? '🇩🇪 → 🇭🇷' : '🇭🇷 → 🇩🇪';
+    final streak = ref.watch(currentStreakProvider).value ?? 0;
+
+    ref.listen<AsyncValue<StreakReward?>>(streakRewardCheckProvider,
+        (prev, next) {
+      final reward = next.value;
+      if (reward == null) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) _showStreakRewardDialog(context, reward);
+      });
+    });
+
     return Scaffold(
       drawer: const _AppDrawer(),
       appBar: AppBar(
         title: Row(
           mainAxisSize: MainAxisSize.min,
-          children: const [
-            Text('Vokabeltrainer'),
-            SizedBox(width: 10),
-            Text('🇩🇪 ↔ 🇭🇷', style: TextStyle(fontSize: 20)),
+          children: [
+            const Text('Vokabeltrainer'),
+            const SizedBox(width: 10),
+            InkWell(
+              onTap: () =>
+                  ref.read(preferredDirectionProvider.notifier).toggle(),
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                child: Text(flagDisplay,
+                    style: const TextStyle(fontSize: 20)),
+              ),
+            ),
           ],
         ),
+        bottom: streak > 0 ? _StreakBanner(streak: streak) : null,
       ),
       body: lessonsAsync.when(
         loading: () => const _LoadingView(),
@@ -351,7 +382,7 @@ class _TopicCard extends StatelessWidget {
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => LessonDetailScreen(lesson: lesson),
+              builder: (_) => LessonMenuScreen(lesson: lesson),
             ),
           );
         },
@@ -382,13 +413,16 @@ class _TopicCard extends StatelessWidget {
   }
 }
 
-class _AppDrawer extends StatelessWidget {
+class _AppDrawer extends ConsumerWidget {
   const _AppDrawer();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final firebaseReady = FirebaseStatus.instance.isReady;
+    final authUser =
+        firebaseReady ? ref.watch(authStateProvider).value : null;
     return Drawer(
       child: SafeArea(
         child: Column(
@@ -435,14 +469,96 @@ class _AppDrawer extends StatelessWidget {
                 );
               },
             ),
+            if (firebaseReady)
+              ListTile(
+                leading: Icon(authUser == null
+                    ? Icons.login
+                    : Icons.account_circle_outlined),
+                title: Text(
+                  authUser == null
+                      ? 'Anmelden / Registrieren'
+                      : 'Mein Profil',
+                ),
+                subtitle: authUser?.email != null
+                    ? Text(
+                        authUser!.email!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      )
+                    : null,
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => authUser == null
+                          ? const LoginScreen()
+                          : const ProfileScreen(),
+                    ),
+                  );
+                },
+              )
+            else
+              ListTile(
+                enabled: false,
+                leading: const Icon(Icons.cloud_off_outlined),
+                title: const Text('Login nicht verfügbar'),
+                subtitle: Text(
+                  FirebaseStatus.instance.error ??
+                      'Firebase nicht initialisiert',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ListTile(
+              leading: const Icon(Icons.info_outline),
+              title: const Text('Über die App'),
+              onTap: () {
+                Navigator.of(context).pop();
+                showAboutDialog(
+                  context: context,
+                  applicationName: kAppName,
+                  applicationIcon: const Text(
+                    '🇩🇪',
+                    style: TextStyle(fontSize: 32),
+                  ),
+                  children: [
+                    const SizedBox(height: 12),
+                    Text(
+                      'Version $kAppVersionDisplay',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(kAppTagline),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Vokabeltrainer für Deutsch und Kroatisch — '
+                      'mit Quiz, Lautschrift, Hör- und Sprechübungen.',
+                    ),
+                  ],
+                );
+              },
+            ),
             const Spacer(),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-              child: Text(
-                'Deutsch ↔ Kroatisch',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Deutsch ↔ Kroatisch',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  Text(
+                    'v$kAppVersionDisplay',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -450,4 +566,64 @@ class _AppDrawer extends StatelessWidget {
       ),
     );
   }
+}
+
+class _StreakBanner extends StatelessWidget implements PreferredSizeWidget {
+  const _StreakBanner({required this.streak});
+
+  final int streak;
+
+  static const double _height = 32;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(_height);
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Container(
+      height: _height,
+      width: double.infinity,
+      color: scheme.tertiaryContainer,
+      alignment: Alignment.center,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('🔥', style: TextStyle(fontSize: 16)),
+          const SizedBox(width: 8),
+          Text(
+            '$streak Tag${streak == 1 ? '' : 'e'} in Folge',
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: scheme.onTertiaryContainer,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+void _showStreakRewardDialog(BuildContext context, StreakReward reward) {
+  showDialog<void>(
+    context: context,
+    builder: (ctx) {
+      final theme = Theme.of(ctx);
+      return AlertDialog(
+        icon: const Text('🎉', style: TextStyle(fontSize: 40)),
+        title: Text('Tag ${reward.streakDay} erreicht!'),
+        content: Text(
+          '+${reward.bonusPoints} Bonuspunkte für deinen nächsten Quiz.',
+          style: theme.textTheme.bodyMedium,
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Stark!'),
+          ),
+        ],
+      );
+    },
+  );
 }

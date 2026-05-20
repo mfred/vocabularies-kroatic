@@ -60,7 +60,7 @@ class AttemptRow extends StatelessWidget {
                     padding: const EdgeInsets.only(right: 4),
                     child: Tooltip(
                       message: j.label,
-                      child: Icon(j.icon, size: 16, color: scheme.tertiary),
+                      child: Text(j.emoji, style: const TextStyle(fontSize: 14)),
                     ),
                   )
               else if (attempt.hintUsed)

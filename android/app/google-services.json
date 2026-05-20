@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "664445745917",
+    "project_id": "vocabularies-kroatic",
+    "storage_bucket": "vocabularies-kroatic.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:664445745917:android:60c8fa298d881678365c94",
+        "android_client_info": {
+          "package_name": "at.token.vocabularies.vocabularies_kroatic"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBttwosOqqg5vie8vvU9oUYZ0HIh7cIIoI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

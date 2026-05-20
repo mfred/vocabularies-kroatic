@@ -1,27 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/firebase_status.dart';
 import '../../../shared/providers.dart';
+import '../../auth/screens/login_screen.dart';
 import '../models/leaderboard_filter.dart';
 import '../models/leaderboard_range.dart';
 import '../widgets/leaderboard_row.dart';
-import '../widgets/lesson_filter_bar.dart';
 import '../widgets/score_explanation_dialog.dart';
-import 'session_detail_screen.dart';
 
-class HighscoreScreen extends ConsumerStatefulWidget {
+class HighscoreScreen extends ConsumerWidget {
   const HighscoreScreen({super.key});
 
   @override
-  ConsumerState<HighscoreScreen> createState() => _HighscoreScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authUser = ref.watch(authStateProvider).value;
+    final firebaseReady = FirebaseStatus.instance.isReady;
 
-class _HighscoreScreenState extends ConsumerState<HighscoreScreen> {
-  String? _selectedLessonId;
-
-  @override
-  Widget build(BuildContext context) {
-    final lessonsAsync = ref.watch(cachedLessonsProvider);
     return DefaultTabController(
       length: LeaderboardRange.values.length,
       child: Scaffold(
@@ -42,30 +37,69 @@ class _HighscoreScreenState extends ConsumerState<HighscoreScreen> {
             ],
           ),
         ),
-        body: Column(
-          children: [
-            lessonsAsync.maybeWhen(
-              data: (lessons) => LessonFilterBar(
-                lessons: lessons,
-                selectedLessonId: _selectedLessonId,
-                onSelected: (id) =>
-                    setState(() => _selectedLessonId = id),
-              ),
-              orElse: () => const SizedBox(height: 48),
-            ),
-            Expanded(
-              child: TabBarView(
+        body: (!firebaseReady || authUser == null)
+            ? _GlobalLoginCta(firebaseReady: firebaseReady)
+            : TabBarView(
                 children: [
                   for (final range in LeaderboardRange.values)
                     _LeaderboardTab(
-                      filter: LeaderboardFilter(
-                        range: range,
-                        lessonId: _selectedLessonId,
-                      ),
+                      filter: LeaderboardFilter(range: range),
                     ),
                 ],
               ),
+      ),
+    );
+  }
+}
+
+class _GlobalLoginCta extends StatelessWidget {
+  const _GlobalLoginCta({required this.firebaseReady});
+
+  final bool firebaseReady;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.public_off,
+                size: 56, color: theme.colorScheme.outline),
+            const SizedBox(height: 12),
+            Text(
+              firebaseReady
+                  ? 'Anmelden, um die globale Bestenliste zu sehen.'
+                  : 'Globale Bestenliste ist nicht konfiguriert.',
+              style: theme.textTheme.bodyLarge,
+              textAlign: TextAlign.center,
             ),
+            const SizedBox(height: 6),
+            Text(
+              firebaseReady
+                  ? 'Eingeloggte Spieler messen sich weltweit.'
+                  : 'Firebase muss eingerichtet sein (flutterfire configure).',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            if (firebaseReady) ...[
+              const SizedBox(height: 20),
+              FilledButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const LoginScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.login),
+                label: const Text('Anmelden / Registrieren'),
+              ),
+            ],
           ],
         ),
       ),
@@ -131,19 +165,7 @@ class _LeaderboardTab extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             itemCount: entries.length,
             itemBuilder: (context, i) {
-              final entry = entries[i];
-              return LeaderboardRow(
-                entry: entry,
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => SessionDetailScreen(
-                        sessionId: entry.sessionId,
-                      ),
-                    ),
-                  );
-                },
-              );
+              return LeaderboardRow(entry: entries[i]);
             },
           ),
         );

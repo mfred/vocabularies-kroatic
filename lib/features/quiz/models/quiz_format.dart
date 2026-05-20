@@ -1,5 +1,5 @@
 enum QuizFormat {
-  multipleChoice('mc', 'Auswählen'),
+  multipleChoice('mc', 'Vokabelcheck'),
   type('type', 'Schreiben'),
   speak('speak', 'Sprechen'),
   listenSpeak('listen', 'Hören & Sprechen');

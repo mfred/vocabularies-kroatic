@@ -1,15 +1,13 @@
-import 'package:flutter/material.dart';
-
 enum JokerType {
-  ipa('ipa', 'Lautschrift', Icons.record_voice_over_outlined, 5),
-  fiftyFifty('50_50', '50/50', Icons.exposure_outlined, 15),
-  picture('picture', 'Bild', Icons.image_outlined, 5);
+  ipa('ipa', 'Lautschrift', '🗣️', 15),
+  fiftyFifty('50_50', '50/50', '🎲', 5),
+  picture('picture', 'Bild', '🖼️', 10);
 
-  const JokerType(this.code, this.label, this.icon, this.cost);
+  const JokerType(this.code, this.label, this.emoji, this.cost);
 
   final String code;
   final String label;
-  final IconData icon;
+  final String emoji;
   final int cost;
 
   static JokerType? fromCode(String code) {

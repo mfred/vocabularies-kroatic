@@ -25,83 +25,92 @@ class JokerBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final anyUsed = usedJokers.isNotEmpty;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 4, right: 10),
+            child: Text(
+              'Joker',
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          for (final joker in JokerType.values)
+            Expanded(
+              child: _JokerButton(
+                joker: joker,
+                available: jokerAvailable(
+                  joker,
+                  question: question,
+                  format: format,
+                ),
+                used: usedJokers.contains(joker),
+                // Wenn ein anderer Joker bereits genutzt wurde, sperre die
+                // restlichen — pro Frage max. ein Joker.
+                locked: isAnswered || (anyUsed && !usedJokers.contains(joker)),
+                onTap: () => onUseJoker(joker),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class JokerReveals extends StatelessWidget {
+  const JokerReveals({
+    super.key,
+    required this.question,
+    required this.usedJokers,
+  });
+
+  final QuizQuestion question;
+  final Set<JokerType> usedJokers;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final showIpa =
+        usedJokers.contains(JokerType.ipa) && question.ipaHint != null;
+    final showPicture = usedJokers.contains(JokerType.picture) &&
+        question.pictureIcon != null;
+    if (!showIpa && !showPicture) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: scheme.outlineVariant),
-          ),
-          child: Row(
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(left: 4, right: 10),
-                child: Text(
-                  'Joker',
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              for (final joker in JokerType.values)
-                Expanded(
-                  child: _JokerButton(
-                    joker: joker,
-                    available: jokerAvailable(
-                      joker,
-                      question: question,
-                      format: format,
-                    ),
-                    used: usedJokers.contains(joker),
-                    locked: isAnswered,
-                    onTap: () => onUseJoker(joker),
-                  ),
-                ),
-            ],
-          ),
-        ),
-        if (usedJokers.contains(JokerType.ipa) && question.ipaHint != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: _RevealCard(
-              icon: JokerType.ipa.icon,
-              child: Text(
-                '[${question.ipaHint}]',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontStyle: FontStyle.italic,
-                  color: scheme.onTertiaryContainer,
-                ),
+        if (showIpa)
+          _RevealCard(
+            emoji: JokerType.ipa.emoji,
+            child: Text(
+              '[${question.ipaHint}]',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontStyle: FontStyle.italic,
+                color: scheme.onTertiaryContainer,
               ),
             ),
           ),
-        if (usedJokers.contains(JokerType.picture) &&
-            question.pictureIcon != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: _RevealCard(
-              icon: JokerType.picture.icon,
-              child: Row(
-                children: [
-                  Icon(
-                    question.pictureIcon,
-                    size: 48,
-                    color: scheme.primary,
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Bild-Joker',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: scheme.onTertiaryContainer,
-                    ),
-                  ),
-                ],
-              ),
+        if (showPicture) ...[
+          if (showIpa) const SizedBox(height: 8),
+          _RevealCard(
+            emoji: JokerType.picture.emoji,
+            child: Icon(
+              question.pictureIcon,
+              size: 56,
+              color: scheme.primary,
             ),
           ),
+        ],
       ],
     );
   }
@@ -135,7 +144,7 @@ class _JokerButton extends StatelessWidget {
       tooltip = 'Joker bereits genutzt';
     } else if (!available) {
       tooltip = joker == JokerType.fiftyFifty
-          ? 'Nur im Auswählen-Modus'
+          ? 'Nur im Vokabelcheck-Modus'
           : '${joker.label} nicht verfügbar';
     } else {
       tooltip = '${joker.label} (−${joker.cost} P)';
@@ -150,7 +159,10 @@ class _JokerButton extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(joker.icon, color: color, size: 24),
+              Text(
+                joker.emoji,
+                style: TextStyle(fontSize: 22, color: color),
+              ),
               const SizedBox(height: 2),
               Text(
                 joker.label,
@@ -176,9 +188,9 @@ class _JokerButton extends StatelessWidget {
 }
 
 class _RevealCard extends StatelessWidget {
-  const _RevealCard({required this.icon, required this.child});
+  const _RevealCard({required this.emoji, required this.child});
 
-  final IconData icon;
+  final String emoji;
   final Widget child;
 
   @override
@@ -194,7 +206,7 @@ class _RevealCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(icon, color: scheme.tertiary),
+          Text(emoji, style: const TextStyle(fontSize: 20)),
           const SizedBox(width: 10),
           Expanded(child: child),
         ],

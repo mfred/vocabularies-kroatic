@@ -7,6 +7,42 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Added — Iteration 14 (Cloud-Login + globale Highscores + Streaks)
+- **About-Dialog**: Version + Tagline + Beschreibung wandern aus dem
+  schmalen Header in den Dialog-Body — keine abgeschnittenen Texte mehr.
+- **Firebase-Integration** (firebase_core/auth/cloud_firestore) mit
+  Graceful Degradation: ohne `flutterfire configure` läuft die App
+  weiter im reinen Lokal-Modus, Login + Global-Leaderboard werden
+  ausgeblendet.
+- **E-Mail+Passwort-Login**: neuer Drawer-Eintrag „Anmelden /
+  Registrieren" → `LoginScreen` mit Tabs Anmelden/Registrieren +
+  Passwort-Reset. Eingeloggte sehen „Mein Profil" → `ProfileScreen`
+  mit Streak-Counter und Abmelden-Button.
+- **Globale Bestenliste**: Highscore-Screen bekommt SegmentedButton
+  „Lokal / Global". Globale Einträge kommen aus Firestore-Collection
+  `scores`, sortiert nach `scorePoints DESC, durationMs ASC`.
+  `firestore.rules` im Repo-Root: jeder darf lesen, eingeloggte nur
+  eigene Scores schreiben, Edits/Deletes nicht erlaubt.
+- **Upload-Hook**: Nach Quiz-Finalize wird die Session automatisch
+  fire-and-forget zu Firestore hochgeladen, sofern eingeloggt.
+  Offline = nur lokal, keine Fehlermeldung.
+- **Streak-System**: zählt aufeinanderfolgende Kalendertage mit
+  abgeschlossenen Sessions. 🔥-Pille im Home-AppBar, Anzeige im
+  Profil. Meilensteine 3/7/14/30/60/100 Tage geben +50/+150/+400/
+  +1000/+2500/+5000 Bonuspunkte für den jeweils nächsten Quiz.
+  Bonus wird aus `Players.pendingBonusPoints` beim Session-Finalize
+  konsumiert. Neue Drift-Tabelle `StreakRewards` + Schema-Migration
+  auf v5. Reward-Dialog erscheint nach erreichtem Meilenstein-Tag.
+- **Setup-Hinweis**: Vor Erstinbetriebnahme muss einmal
+  `flutterfire configure` ausgeführt werden, um Firebase-Optionen
+  zu erzeugen (siehe README/PROJECT.md). Bis dahin laufen alle
+  bisherigen Features unverändert.
+
+### Tests
+- Neue `streak_service_test.dart` mit 12 Cases (Streak-Berechnung,
+  Tagestoleranz, Lücken, Mehrfach-Sessions, Reward-Stufen).
+- Gesamte Test-Suite: 34 Tests, alle grün.
+
 ### Changed — Iteration 12 (STT läuft online, kein Install-Pfad mehr)
 - **STT-Pre-Check entfernt**: bisher prüfte die App via
   `speech_to_text.locales()`, ob das Ziel-Locale (hr-HR) bekannt

@@ -35,20 +35,20 @@ void main() {
       );
     });
 
-    test('ipa joker x2 = -10', () {
+    test('ipa joker x2 = -30', () {
       expect(
         computeScore(
-            correctCount: 10, durationSeconds: 0, jokerCost: 10),
-        1590,
+            correctCount: 10, durationSeconds: 0, jokerCost: 30),
+        1570,
       );
     });
 
     test('mixed jokers add to total cost', () {
-      // 2x ipa (5) + 1x 50/50 (15) + 1x picture (5) = 35
+      // 2x ipa (15) + 1x 50/50 (5) + 1x picture (10) = 45
       expect(
         computeScore(
-            correctCount: 10, durationSeconds: 0, jokerCost: 35),
-        1565,
+            correctCount: 10, durationSeconds: 0, jokerCost: 45),
+        1555,
       );
     });
 
@@ -108,7 +108,7 @@ void main() {
       );
     });
 
-    test('picture not available without icon', () {
+    test('picture not available without icon mapping', () {
       final q = _question();
       expect(
         jokerAvailable(JokerType.picture,
