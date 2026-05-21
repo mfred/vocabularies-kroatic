@@ -10,6 +10,20 @@ import 'vocab_icons.dart';
 const int kQuizQuestionCount = 10;
 const int kQuizOptionsPerQuestion = 4;
 
+const Map<String, int> _kStageOrder = {
+  'words': 0,
+  'phrases': 1,
+  'sentences': 2,
+};
+
+/// Stabil nach Stage sortieren — Wörter (0) vor Phrasen (1) vor Sätzen (2).
+/// Unbekannte Stages landen hinten. Public, weil unit-getestet.
+List<Item> sortByStage(List<Item> items) {
+  return items
+    ..sort((a, b) =>
+        (_kStageOrder[a.stage] ?? 99).compareTo(_kStageOrder[b.stage] ?? 99));
+}
+
 class QuizBuilder {
   QuizBuilder(this._db, {Random? random}) : _random = random ?? Random();
 
@@ -33,7 +47,10 @@ class QuizBuilder {
     // beschränkt; Distractoren ziehen wir trotzdem aus der ganzen Lektion.
     final questionItems = itemPoolOverride ?? items;
     if (questionItems.isEmpty) return const [];
-    final picked = _pickQuestionItems(questionItems, stats);
+    // Stage-Sort nach der Auswahl: Wörter zuerst, dann Phrasen, dann Sätze —
+    // damit es am Anfang nicht zu schwer losgeht. Innerhalb derselben Stage
+    // bleibt die Reihenfolge des QuizSelectors (seenCount/difficulty) stabil.
+    final picked = sortByStage(_pickQuestionItems(questionItems, stats));
     final seenIds = <String>{
       for (final e in stats.entries)
         if (e.value.seenCount > 0) e.key,

@@ -7,6 +7,25 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Added — Iteration 16 (Quiz-Reihenfolge + Streak-Diagnose)
+- **Quiz startet mit Wörtern**: Nach der Frage-Auswahl im `QuizBuilder`
+  werden die 10 Fragen stabil nach Stage sortiert — erst `words`, dann
+  `phrases`, dann `sentences`. Damit beginnt jedes Quiz mit den leichten
+  Vokabeln; die spaced-repetition-Reihung des `QuizSelector` bleibt
+  innerhalb derselben Stage erhalten. Greift auch im „Fehler ausbessern"-
+  Modus.
+- **Streak-Diagnose im Profil**: aufklappbare Karte zeigt Spieler-ID,
+  Heutiges Datum, aktueller Streak, finalisierte/unfertige Sessions sowie
+  die letzten 14 distinkten Spieltage. Hilft beim Debuggen, wenn der
+  Streak-Banner nicht hochzählt.
+- **Neue DB-Query** `unfinishedSessionsCountForPlayer(playerId)`: zählt
+  Sessions ohne `finishedAt` — sichtbar im Diagnose-Block.
+
+### Changed — Iteration 16
+- `_computeCurrentStreak` rechnet den Vortag jetzt per Kalender-Arithmetik
+  (`DateTime(y, m, d - 1)`) statt `subtract(Duration(days: 1))` — robust
+  gegen DST-Sprünge.
+
 ### Added — Iteration 15 („Fehler ausbessern"-Menüpunkt)
 - **Dritte Karte im `LessonMenuScreen`**: „Fehler ausbessern" — startet ein
   Quiz mit ausschließlich den Items, bei denen der Spieler in dieser

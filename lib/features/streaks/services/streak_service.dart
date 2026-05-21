@@ -64,13 +64,13 @@ int _computeCurrentStreak(List<int> finishedAtsMs, DateTime now) {
   // verloren geht. (User hat 24h+ Toleranz; Bruch erst, wenn auch gestern leer.)
   var cursor = today;
   if (!days.contains(_dayKey(cursor))) {
-    cursor = cursor.subtract(const Duration(days: 1));
+    cursor = DateTime(cursor.year, cursor.month, cursor.day - 1);
     if (!days.contains(_dayKey(cursor))) return 0;
   }
   var streak = 0;
   while (days.contains(_dayKey(cursor))) {
     streak++;
-    cursor = cursor.subtract(const Duration(days: 1));
+    cursor = DateTime(cursor.year, cursor.month, cursor.day - 1);
   }
   return streak;
 }

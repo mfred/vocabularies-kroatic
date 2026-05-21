@@ -115,6 +115,52 @@ final currentStreakProvider = FutureProvider.autoDispose<int>((ref) async {
   return ref.watch(streakServiceProvider).currentStreak(player.id);
 });
 
+class StreakDiagnostics {
+  const StreakDiagnostics({
+    required this.playerId,
+    required this.finishedSessions,
+    required this.unfinishedSessions,
+    required this.distinctDays,
+    required this.currentStreak,
+    required this.now,
+  });
+
+  final String playerId;
+  final int finishedSessions;
+  final int unfinishedSessions;
+
+  /// Sortiert absteigend (neuester Tag zuerst). Datum jeweils lokal.
+  final List<DateTime> distinctDays;
+  final int currentStreak;
+  final DateTime now;
+}
+
+final streakDiagnosticsProvider =
+    FutureProvider.autoDispose<StreakDiagnostics>((ref) async {
+  final player = await ref.watch(currentPlayerProvider.future);
+  final db = ref.watch(databaseProvider);
+  final finished = await db.finishedAtsForPlayer(player.id);
+  final unfinished = await db.unfinishedSessionsCountForPlayer(player.id);
+  final dayKeys = <int>{};
+  final daySet = <DateTime>{};
+  for (final ms in finished) {
+    final d = DateTime.fromMillisecondsSinceEpoch(ms);
+    final key = d.year * 10000 + d.month * 100 + d.day;
+    if (dayKeys.add(key)) daySet.add(DateTime(d.year, d.month, d.day));
+  }
+  final days = daySet.toList()..sort((a, b) => b.compareTo(a));
+  final currentStreak =
+      await ref.watch(streakServiceProvider).currentStreak(player.id);
+  return StreakDiagnostics(
+    playerId: player.id,
+    finishedSessions: finished.length,
+    unfinishedSessions: unfinished,
+    distinctDays: days,
+    currentStreak: currentStreak,
+    now: DateTime.now(),
+  );
+});
+
 final streakRewardCheckProvider =
     FutureProvider.autoDispose<StreakReward?>((ref) async {
   final player = await ref.watch(currentPlayerProvider.future);

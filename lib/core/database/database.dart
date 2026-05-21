@@ -352,6 +352,19 @@ class AppDatabase extends _$AppDatabase {
     return q.get();
   }
 
+  /// Anzahl der Sessions des Spielers, die *gestartet* aber nie
+  /// finalisiert wurden (App-Crash, Quiz abgebrochen, …). Reine
+  /// Diagnose-Info — hilft beim Debugging, wenn der Streak nicht
+  /// hochzählt.
+  Future<int> unfinishedSessionsCountForPlayer(String playerId) async {
+    final row = await (selectOnly(quizSessions)
+          ..addColumns([quizSessions.id.count()])
+          ..where(quizSessions.playerId.equals(playerId) &
+              quizSessions.finishedAt.isNull()))
+        .getSingle();
+    return row.read(quizSessions.id.count()) ?? 0;
+  }
+
   Future<List<int>> finishedAtsForPlayer(String playerId) async {
     final q = selectOnly(quizSessions)
       ..addColumns([quizSessions.finishedAt])
