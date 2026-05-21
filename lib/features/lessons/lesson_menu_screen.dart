@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/database/database.dart';
+import '../../shared/providers.dart';
 import '../quiz/screens/quiz_setup_screen.dart';
 import 'vocabulary_list_screen.dart';
 
-class LessonMenuScreen extends StatelessWidget {
+class LessonMenuScreen extends ConsumerWidget {
   const LessonMenuScreen({super.key, required this.lesson});
 
   final LessonsCacheData lesson;
@@ -13,8 +15,20 @@ class LessonMenuScreen extends StatelessWidget {
       lesson.wordCount + lesson.phraseCount + lesson.sentenceCount;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final wrongCountAsync =
+        ref.watch(wrongItemsCountProvider(lesson.lessonId));
+    final wrongCount = wrongCountAsync.maybeWhen(
+      data: (n) => n,
+      orElse: () => null,
+    );
+    final reviewSubtitle = switch (wrongCount) {
+      null => 'Lade …',
+      0 => 'Keine offenen Fehler — alles richtig gewusst.',
+      1 => '1 Vokabel, die du zuletzt falsch hattest.',
+      _ => '$wrongCount Vokabeln, die du zuletzt falsch hattest.',
+    };
     return Scaffold(
       appBar: AppBar(
         title: Column(
@@ -72,6 +86,23 @@ class LessonMenuScreen extends StatelessWidget {
                   );
                 },
               ),
+              const SizedBox(height: 12),
+              _MenuCard(
+                icon: Icons.refresh,
+                title: 'Fehler ausbessern',
+                subtitle: reviewSubtitle,
+                enabled: (wrongCount ?? 0) > 0,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => QuizSetupScreen(
+                        lesson: lesson,
+                        reviewMode: true,
+                      ),
+                    ),
+                  );
+                },
+              ),
             ],
           ),
         ),
@@ -86,16 +117,25 @@ class _MenuCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
+    this.enabled = true,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final iconColor = enabled ? scheme.primary : scheme.outline;
+    final titleColor =
+        enabled ? scheme.onSurface : scheme.onSurfaceVariant.withValues(alpha: 0.7);
+    final subtitleColor = enabled
+        ? scheme.onSurfaceVariant
+        : scheme.onSurfaceVariant.withValues(alpha: 0.6);
     return Card(
       elevation: 0,
       margin: EdgeInsets.zero,
@@ -103,18 +143,18 @@ class _MenuCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
           width: 1.5,
-          color: theme.colorScheme.outlineVariant,
+          color: scheme.outlineVariant,
         ),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: onTap,
+        onTap: enabled ? onTap : null,
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
           child: Row(
             children: [
-              Icon(icon, size: 40, color: theme.colorScheme.primary),
+              Icon(icon, size: 40, color: iconColor),
               const SizedBox(width: 18),
               Expanded(
                 child: Column(
@@ -124,19 +164,21 @@ class _MenuCard extends StatelessWidget {
                       title,
                       style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w600,
+                        color: titleColor,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                        color: subtitleColor,
                       ),
                     ),
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right, color: theme.colorScheme.outline),
+              if (enabled)
+                Icon(Icons.chevron_right, color: scheme.outline),
             ],
           ),
         ),

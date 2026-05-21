@@ -239,6 +239,36 @@ class AppDatabase extends _$AppDatabase {
     return into(quizAttempts).insert(entry);
   }
 
+  /// Liefert alle Items der Lektion, bei denen der letzte Versuch des
+  /// Spielers `wasCorrect == false` war. Items, die der Spieler nie
+  /// angefasst hat, fallen ebenso raus wie zuletzt richtig beantwortete.
+  ///
+  /// Direction-agnostisch — beide Richtungen zählen in denselben Pool.
+  Future<List<Item>> wrongItemsForLesson({
+    required String playerId,
+    required String lessonId,
+  }) async {
+    final query = select(quizAttempts).join([
+      innerJoin(
+        quizSessions,
+        quizSessions.id.equalsExp(quizAttempts.sessionId),
+      ),
+      innerJoin(items, items.id.equalsExp(quizAttempts.itemId)),
+    ])
+      ..where(quizSessions.playerId.equals(playerId) &
+          items.lessonId.equals(lessonId))
+      ..orderBy([OrderingTerm.desc(quizAttempts.answeredAt)]);
+    final rows = await query.get();
+    final seen = <String>{};
+    final out = <Item>[];
+    for (final r in rows) {
+      final a = r.readTable(quizAttempts);
+      if (!seen.add(a.itemId)) continue; // nur der erste = neueste Treffer
+      if (!a.wasCorrect) out.add(r.readTable(items));
+    }
+    return out;
+  }
+
   Future<Set<String>> seenItemIdsForPlayer({
     required String playerId,
     required String mode,

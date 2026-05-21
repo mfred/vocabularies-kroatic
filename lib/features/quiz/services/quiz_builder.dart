@@ -20,6 +20,7 @@ class QuizBuilder {
     required String lessonId,
     required String playerId,
     required QuizDirection direction,
+    List<Item>? itemPoolOverride,
   }) async {
     final items = await _db.itemsForLesson(lessonId);
     if (items.isEmpty) return const [];
@@ -28,7 +29,11 @@ class QuizBuilder {
       playerId: playerId,
       mode: direction.mode,
     );
-    final picked = _pickQuestionItems(items, stats);
+    // Im Review-Modus wird die Frage-Auswahl auf den übergebenen Pool
+    // beschränkt; Distractoren ziehen wir trotzdem aus der ganzen Lektion.
+    final questionItems = itemPoolOverride ?? items;
+    if (questionItems.isEmpty) return const [];
+    final picked = _pickQuestionItems(questionItems, stats);
     final seenIds = <String>{
       for (final e in stats.entries)
         if (e.value.seenCount > 0) e.key,

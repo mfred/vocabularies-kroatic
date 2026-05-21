@@ -8,9 +8,14 @@ import '../models/quiz_format.dart';
 import 'quiz_screen.dart';
 
 class QuizSetupScreen extends ConsumerStatefulWidget {
-  const QuizSetupScreen({super.key, required this.lesson});
+  const QuizSetupScreen({
+    super.key,
+    required this.lesson,
+    this.reviewMode = false,
+  });
 
   final LessonsCacheData lesson;
+  final bool reviewMode;
 
   @override
   ConsumerState<QuizSetupScreen> createState() => _QuizSetupScreenState();
@@ -23,8 +28,6 @@ class _QuizSetupScreenState extends ConsumerState<QuizSetupScreen> {
       widget.lesson.wordCount +
       widget.lesson.phraseCount +
       widget.lesson.sentenceCount;
-
-  bool get _canStartQuiz => _totalItems >= 4;
 
   IconData _iconForFormat(QuizFormat f) {
     switch (f) {
@@ -47,6 +50,7 @@ class _QuizSetupScreenState extends ConsumerState<QuizSetupScreen> {
           lessonTitle: widget.lesson.titleDe,
           direction: direction,
           format: _format,
+          reviewMode: widget.reviewMode,
         ),
       ),
     );
@@ -56,13 +60,40 @@ class _QuizSetupScreenState extends ConsumerState<QuizSetupScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final direction = ref.watch(preferredDirectionProvider);
+    final reviewCountAsync = widget.reviewMode
+        ? ref.watch(wrongItemsCountProvider(widget.lesson.lessonId))
+        : null;
+    final reviewCount = reviewCountAsync?.maybeWhen(
+          data: (n) => n,
+          orElse: () => null,
+        );
+    final canStartNormal = !widget.reviewMode && _totalItems >= 4;
+    final canStartReview = widget.reviewMode && (reviewCount ?? 0) >= 1;
+    final canStart = canStartNormal || canStartReview;
+
+    final String buttonLabel;
+    if (widget.reviewMode) {
+      if (reviewCount == null) {
+        buttonLabel = 'Lade …';
+      } else if (reviewCount == 0) {
+        buttonLabel = 'Keine offenen Fehler';
+      } else {
+        final n = reviewCount > 10 ? 10 : reviewCount;
+        buttonLabel = 'Fehler wiederholen ($n)';
+      }
+    } else {
+      buttonLabel = canStartNormal
+          ? 'Quiz starten (10)'
+          : 'Zu wenige Items für ein Quiz';
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Quiz starten'),
+            Text(widget.reviewMode ? 'Fehler ausbessern' : 'Quiz starten'),
             Text(
               widget.lesson.titleDe,
               style: theme.textTheme.bodySmall?.copyWith(
@@ -102,13 +133,11 @@ class _QuizSetupScreenState extends ConsumerState<QuizSetupScreen> {
               ],
               const Spacer(),
               FilledButton.icon(
-                onPressed: _canStartQuiz ? () => _startQuiz(direction) : null,
-                icon: const Icon(Icons.play_arrow),
-                label: Text(
-                  _canStartQuiz
-                      ? 'Quiz starten (10)'
-                      : 'Zu wenige Items für ein Quiz',
+                onPressed: canStart ? () => _startQuiz(direction) : null,
+                icon: Icon(
+                  widget.reviewMode ? Icons.refresh : Icons.play_arrow,
                 ),
+                label: Text(buttonLabel),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),

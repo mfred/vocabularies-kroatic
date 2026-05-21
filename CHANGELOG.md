@@ -7,6 +7,23 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Added — Iteration 15 („Fehler ausbessern"-Menüpunkt)
+- **Dritte Karte im `LessonMenuScreen`**: „Fehler ausbessern" — startet ein
+  Quiz mit ausschließlich den Items, bei denen der Spieler in dieser
+  Lektion zuletzt falsch geantwortet hat. Anzeige der Item-Anzahl im
+  Subtitle; Karte ausgegraut, wenn der Pool leer ist.
+- **DB-Query** `wrongItemsForLesson(playerId, lessonId)`: nimmt pro Item
+  den letzten Versuch (über alle Richtungen) und filtert auf
+  `wasCorrect == false`.
+- **QuizSessionArgs.reviewMode**: neues Flag. Der `QuizBuilder` akzeptiert
+  einen optionalen `itemPoolOverride`; Distractoren ziehen weiter aus der
+  ganzen Lektion, damit MC seine 4 Optionen behält.
+- **QuizSetupScreen** im Review-Modus: Titel „Fehler ausbessern", Button
+  zeigt „Fehler wiederholen (N)" statt „Quiz starten (10)".
+- **Provider** `wrongItemsCountProvider(lessonId)`: wird nach jedem
+  Session-Finalize invalidiert, damit die Karte sofort die aktuelle Zahl
+  zeigt.
+
 ### Added — Iteration 14 (Cloud-Login + globale Highscores + Streaks)
 - **About-Dialog**: Version + Tagline + Beschreibung wandern aus dem
   schmalen Header in den Dialog-Body — keine abgeschnittenen Texte mehr.

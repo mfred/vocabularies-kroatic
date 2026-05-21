@@ -68,6 +68,18 @@ final lessonItemsProvider =
   return ref.watch(databaseProvider).itemsForLesson(lessonId);
 });
 
+/// Anzahl der Items, bei denen der aktuelle Spieler zuletzt falsch
+/// geantwortet hat — Grundlage für die „Fehler ausbessern"-Karte.
+final wrongItemsCountProvider =
+    FutureProvider.autoDispose.family<int, String>((ref, lessonId) async {
+  final player = await ref.watch(currentPlayerProvider.future);
+  final items = await ref.watch(databaseProvider).wrongItemsForLesson(
+        playerId: player.id,
+        lessonId: lessonId,
+      );
+  return items.length;
+});
+
 final playerServiceProvider = Provider<PlayerService>((ref) {
   return PlayerService(ref.watch(databaseProvider));
 });

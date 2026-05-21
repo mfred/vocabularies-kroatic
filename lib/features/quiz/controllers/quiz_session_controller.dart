@@ -21,11 +21,16 @@ class QuizSessionArgs {
     required this.lessonId,
     required this.direction,
     required this.format,
+    this.reviewMode = false,
   });
 
   final String lessonId;
   final QuizDirection direction;
   final QuizFormat format;
+
+  /// Wenn true, kommen die Fragen ausschließlich aus den zuletzt falsch
+  /// beantworteten Items dieser Lektion (siehe „Fehler ausbessern").
+  final bool reviewMode;
 
   String get sessionMode => '${format.code}_${direction.code}';
 
@@ -35,10 +40,11 @@ class QuizSessionArgs {
       other is QuizSessionArgs &&
           other.lessonId == lessonId &&
           other.direction == direction &&
-          other.format == format;
+          other.format == format &&
+          other.reviewMode == reviewMode;
 
   @override
-  int get hashCode => Object.hash(lessonId, direction, format);
+  int get hashCode => Object.hash(lessonId, direction, format, reviewMode);
 }
 
 class QuizSessionState {
@@ -142,10 +148,17 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
     final db = ref.read(databaseProvider);
     final player = await ref.read(currentPlayerProvider.future);
     final builder = QuizBuilder(db);
+    final reviewPool = _args.reviewMode
+        ? await db.wrongItemsForLesson(
+            playerId: player.id,
+            lessonId: _args.lessonId,
+          )
+        : null;
     final questions = await builder.build(
       lessonId: _args.lessonId,
       playerId: player.id,
       direction: _args.direction,
+      itemPoolOverride: reviewPool,
     );
     final sessionId = _uuid.v4();
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -296,6 +309,8 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
     ));
     // Streak könnte sich nach Session geändert haben (neuer Tag).
     ref.invalidate(currentStreakProvider);
+    // „Fehler ausbessern"-Pool für diese Lektion neu zählen.
+    ref.invalidate(wrongItemsCountProvider(_args.lessonId));
     // Reward erst NACH der Wertung dieser Session prüfen — sonst würde der
     // Bonus für genau diese Session schon mit eingerechnet.
     ref.invalidate(streakRewardCheckProvider);

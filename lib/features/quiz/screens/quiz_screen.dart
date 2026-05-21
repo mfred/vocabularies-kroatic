@@ -24,12 +24,14 @@ class QuizScreen extends ConsumerStatefulWidget {
     required this.lessonTitle,
     required this.direction,
     required this.format,
+    this.reviewMode = false,
   });
 
   final String lessonId;
   final String lessonTitle;
   final QuizDirection direction;
   final QuizFormat format;
+  final bool reviewMode;
 
   @override
   ConsumerState<QuizScreen> createState() => _QuizScreenState();
@@ -44,6 +46,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
         lessonId: widget.lessonId,
         direction: widget.direction,
         format: widget.format,
+        reviewMode: widget.reviewMode,
       );
 
   @override
