@@ -207,11 +207,12 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                       if (state.usedJokersThisQuestion
                               .contains(JokerType.ipa) ||
                           state.usedJokersThisQuestion
-                              .contains(JokerType.picture)) ...[
+                              .contains(JokerType.audio)) ...[
                         const SizedBox(height: 12),
                         JokerReveals(
                           question: question,
                           usedJokers: state.usedJokersThisQuestion,
+                          onReplayAudio: () => _playCorrectAnswer(question),
                         ),
                       ],
                       const SizedBox(height: 18),
@@ -228,9 +229,14 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                 format: widget.format,
                 usedJokers: state.usedJokersThisQuestion,
                 isAnswered: state.isAnswered,
-                onUseJoker: (j) => ref
-                    .read(quizSessionControllerProvider(_args).notifier)
-                    .useJoker(j),
+                onUseJoker: (j) {
+                  ref
+                      .read(quizSessionControllerProvider(_args).notifier)
+                      .useJoker(j);
+                  if (j == JokerType.audio) {
+                    _playCorrectAnswer(question);
+                  }
+                },
               ),
               if (state.isAnswered && state.wasLastCorrect == false) ...[
                 const SizedBox(height: 12),
@@ -306,6 +312,11 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
   Future<void> _playPrompt(QuizQuestion question) async {
     final tts = ref.read(ttsServiceProvider);
     await tts.speak(question.prompt, question.direction.promptLangTag);
+  }
+
+  Future<void> _playCorrectAnswer(QuizQuestion question) async {
+    final tts = ref.read(ttsServiceProvider);
+    await tts.speak(question.correct, question.direction.answerLangTag);
   }
 
   QuizOptionState _optionStateFor({

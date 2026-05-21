@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vocabularies_kroatic/features/quiz/controllers/quiz_session_controller.dart';
 import 'package:vocabularies_kroatic/features/quiz/models/joker_availability.dart';
@@ -9,7 +8,6 @@ import 'package:vocabularies_kroatic/features/quiz/models/quiz_question.dart';
 
 QuizQuestion _question({
   String? ipa,
-  IconData? icon,
   int options = 4,
 }) {
   return QuizQuestion(
@@ -18,7 +16,6 @@ QuizQuestion _question({
     correct: 'Bok',
     options: List.generate(options, (i) => i == 0 ? 'Bok' : 'opt_$i'),
     ipaHint: ipa,
-    pictureIcon: icon,
     isNewWord: true,
     direction: QuizDirection.deToHr,
     difficulty: 1,
@@ -44,11 +41,11 @@ void main() {
     });
 
     test('mixed jokers add to total cost', () {
-      // 2x ipa (15) + 1x 50/50 (5) + 1x picture (10) = 45
+      // 2x ipa (15) + 1x 50/50 (5) + 1x audio (8) = 43
       expect(
         computeScore(
-            correctCount: 10, durationSeconds: 0, jokerCost: 45),
-        1555,
+            correctCount: 10, durationSeconds: 0, jokerCost: 43),
+        1557,
       );
     });
 
@@ -99,22 +96,15 @@ void main() {
       );
     });
 
-    test('picture available when pictureIcon present', () {
-      final q = _question(icon: Icons.book);
-      expect(
-        jokerAvailable(JokerType.picture,
-            question: q, format: QuizFormat.multipleChoice),
-        isTrue,
-      );
-    });
-
-    test('picture not available without icon mapping', () {
+    test('audio joker ist unabhängig vom Format immer verfügbar', () {
       final q = _question();
-      expect(
-        jokerAvailable(JokerType.picture,
-            question: q, format: QuizFormat.multipleChoice),
-        isFalse,
-      );
+      for (final f in QuizFormat.values) {
+        expect(
+          jokerAvailable(JokerType.audio, question: q, format: f),
+          isTrue,
+          reason: 'audio sollte auch in $f verfügbar sein',
+        );
+      }
     });
   });
 }

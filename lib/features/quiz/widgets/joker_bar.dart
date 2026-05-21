@@ -72,10 +72,15 @@ class JokerReveals extends StatelessWidget {
     super.key,
     required this.question,
     required this.usedJokers,
+    this.onReplayAudio,
   });
 
   final QuizQuestion question;
   final Set<JokerType> usedJokers;
+
+  /// Wird vom QuizScreen geliefert, damit der „Erneut anhören"-Button auf
+  /// der Audio-Reveal-Karte den TTS noch einmal abspielen kann.
+  final VoidCallback? onReplayAudio;
 
   @override
   Widget build(BuildContext context) {
@@ -83,9 +88,8 @@ class JokerReveals extends StatelessWidget {
     final scheme = theme.colorScheme;
     final showIpa =
         usedJokers.contains(JokerType.ipa) && question.ipaHint != null;
-    final showPicture = usedJokers.contains(JokerType.picture) &&
-        question.pictureIcon != null;
-    if (!showIpa && !showPicture) return const SizedBox.shrink();
+    final showAudio = usedJokers.contains(JokerType.audio);
+    if (!showIpa && !showAudio) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -100,14 +104,26 @@ class JokerReveals extends StatelessWidget {
               ),
             ),
           ),
-        if (showPicture) ...[
+        if (showAudio) ...[
           if (showIpa) const SizedBox(height: 8),
           _RevealCard(
-            emoji: JokerType.picture.emoji,
-            child: Icon(
-              question.pictureIcon,
-              size: 56,
-              color: scheme.primary,
+            emoji: JokerType.audio.emoji,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Aussprache abgespielt',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: scheme.onTertiaryContainer,
+                    ),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: onReplayAudio,
+                  icon: const Icon(Icons.replay, size: 18),
+                  label: const Text('Nochmal'),
+                ),
+              ],
             ),
           ),
         ],

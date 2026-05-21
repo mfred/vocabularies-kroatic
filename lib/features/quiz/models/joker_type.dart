@@ -1,7 +1,7 @@
 enum JokerType {
   ipa('ipa', 'Lautschrift', '🗣️', 15),
   fiftyFifty('50_50', '50/50', '🎲', 5),
-  picture('picture', 'Bild', '🖼️', 10);
+  audio('audio', 'Vorlesen', '🔊', 8);
 
   const JokerType(this.code, this.label, this.emoji, this.cost);
 

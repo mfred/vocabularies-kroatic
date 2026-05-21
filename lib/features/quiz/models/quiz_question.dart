@@ -1,5 +1,3 @@
-import 'package:flutter/widgets.dart';
-
 import 'quiz_direction.dart';
 
 class QuizQuestion {
@@ -9,7 +7,6 @@ class QuizQuestion {
     required this.correct,
     required this.options,
     required this.ipaHint,
-    required this.pictureIcon,
     required this.isNewWord,
     required this.direction,
     required this.difficulty,
@@ -20,7 +17,6 @@ class QuizQuestion {
   final String correct;
   final List<String> options;
   final String? ipaHint;
-  final IconData? pictureIcon;
   final bool isNewWord;
   final QuizDirection direction;
   final int difficulty;

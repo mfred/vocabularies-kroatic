@@ -5,7 +5,6 @@ import '../models/item_attempt_stats.dart';
 import '../models/quiz_direction.dart';
 import '../models/quiz_question.dart';
 import 'quiz_selector.dart';
-import 'vocab_icons.dart';
 
 const int kQuizQuestionCount = 10;
 const int kQuizOptionsPerQuestion = 4;
@@ -72,7 +71,6 @@ class QuizBuilder {
         correct: correct,
         options: options,
         ipaHint: _ipaFor(item, direction),
-        pictureIcon: VocabIcons.lookup(item.hrText),
         isNewWord: isNew,
         direction: direction,
         difficulty: item.difficulty,

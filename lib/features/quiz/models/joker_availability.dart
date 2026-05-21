@@ -14,9 +14,9 @@ bool jokerAvailable(
     case JokerType.fiftyFifty:
       return format == QuizFormat.multipleChoice &&
           question.options.length >= 4;
-    case JokerType.picture:
-      // Nur wenn für die Vokabel ein Icon-Mapping existiert; ohne Bild
-      // wird der Joker nicht angeboten.
-      return question.pictureIcon != null;
+    case JokerType.audio:
+      // Vorlesen ist immer verfügbar — fehlt die TTS-Sprache, gibt der
+      // TtsService still nichts aus.
+      return true;
   }
 }

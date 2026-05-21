@@ -7,6 +7,16 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Changed — Iteration 17 (Bild-Joker → Vorlesen-Joker)
+- **🔊 Vorlesen** ersetzt **🖼️ Bild**. Der dritte Joker spielt jetzt die
+  richtige Antwort per TTS in der Zielsprache vor (8 P statt 10 P).
+  Universell verfügbar — kein Icon-Mapping nötig, fällt nie weg.
+  Die Reveal-Karte zeigt einen „Nochmal"-Button für erneutes Abspielen.
+- **`QuizQuestion.pictureIcon`** und die Datei `vocab_icons.dart` entfernt;
+  `QuizBuilder` reicht das Feld nicht mehr durch.
+- Bestehende `picture`-Codes in `jokers_json` älterer Sessions werden in
+  `session_detail_service` still gefiltert (`whereType<JokerType>()`).
+
 ### Added — Iteration 16 (Quiz-Reihenfolge + Streak-Diagnose)
 - **Quiz startet mit Wörtern**: Nach der Frage-Auswahl im `QuizBuilder`
   werden die 10 Fragen stabil nach Stage sortiert — erst `words`, dann
