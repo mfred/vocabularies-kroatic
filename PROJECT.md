@@ -771,6 +771,21 @@ flutter build apk --release
 - Optional: Azure Pronunciation Assessment als Premium
 - Optional: Cloud-Sync des Progress (Firebase / Supabase)
 
+### Späteres Release — Avatar-System
+
+Spieler-Profil bekommt ein Avatar-Feld. Konzept-Skizze:
+
+- Phase A: Initialen-Avatar mit zufällig gewähltem Hintergrund aus
+  der Markenpalette, abgleichbar mit dem Firebase-Anzeigenamen.
+- Phase B: Freischaltbare Avatar-Sets aus dem Vokabel-Universum
+  (Globus, Buch, Sprechblase, Flagge etc.) als Belohnung für
+  bestimmte Streak-/Score-Meilensteine.
+- Persistenz: neue Spalte `avatarKey` an `Players`, Sync via Firestore
+  unter `users/{uid}.avatar`.
+- UI: Avatar im Profile-Screen + Drawer-Header + Bestenlisten-Zeile.
+
+Reine Roadmap-Notiz — keine Code-Änderung in dieser Phase.
+
 ### Phase 5 — Backlog
 
 - Weitere Lektionen (Wetter, Notfall, Geschäft, Hobbys)

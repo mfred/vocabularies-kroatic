@@ -23,29 +23,32 @@ QuizQuestion _question({
 }
 
 void main() {
-  group('computeScore (joker costs)', () {
+  group('computeScore (Skala x20)', () {
     test('no jokers, perfect run', () {
+      // 10×5 + (30 − 60/20) − 0 = 50 + 27 = 77
       expect(
         computeScore(
             correctCount: 10, durationSeconds: 60, jokerCost: 0),
-        1540,
+        77,
       );
     });
 
-    test('ipa joker x2 = -30', () {
+    test('ipa joker x2 = -4', () {
+      // 10×5 + 30 − (2×2) = 76
       expect(
         computeScore(
-            correctCount: 10, durationSeconds: 0, jokerCost: 30),
-        1570,
+            correctCount: 10, durationSeconds: 0, jokerCost: 4),
+        76,
       );
     });
 
     test('mixed jokers add to total cost', () {
-      // 2x ipa (15) + 1x 50/50 (5) + 1x audio (8) = 43
+      // 2× ipa (2) + 1× 50/50 (1) + 1× audio (1) = 6
+      // 10×5 + 30 − 6 = 74
       expect(
         computeScore(
-            correctCount: 10, durationSeconds: 0, jokerCost: 43),
-        1557,
+            correctCount: 10, durationSeconds: 0, jokerCost: 6),
+        74,
       );
     });
 

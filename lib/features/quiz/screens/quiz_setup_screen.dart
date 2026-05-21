@@ -114,7 +114,12 @@ class _QuizSetupScreenState extends ConsumerState<QuizSetupScreen> {
                 onChanged: (d) =>
                     ref.read(preferredDirectionProvider.notifier).set(d),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
+              if (ref
+                      .watch(doublePointsActiveProvider)
+                      .maybeWhen(data: (v) => v, orElse: () => false))
+                _DoublePointsBanner(),
+              const SizedBox(height: 8),
               Text(
                 'Spiel wählen',
                 style: theme.textTheme.titleMedium?.copyWith(
@@ -272,3 +277,36 @@ class _FormatTile extends StatelessWidget {
     );
   }
 }
+
+
+class _DoublePointsBanner extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: scheme.tertiaryContainer,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.tertiary.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        children: [
+          const Text('🎁', style: TextStyle(fontSize: 22)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Doppel-Punkte-Boost aktiv — dieses Quiz zählt ×2',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: scheme.onTertiaryContainer,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+

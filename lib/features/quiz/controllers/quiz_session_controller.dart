@@ -129,8 +129,9 @@ int computeScore({
   required int durationSeconds,
   required int jokerCost,
 }) {
-  final int timeBonus = ((600 - durationSeconds).clamp(0, 600)).toInt();
-  final int raw = correctCount * 100 + timeBonus - jokerCost;
+  // Skala x20 (Iteration 21): Treffer × 5 + Zeitbonus max 30.
+  final int timeBonus = (30 - durationSeconds ~/ 20).clamp(0, 30).toInt();
+  final int raw = correctCount * 5 + timeBonus - jokerCost;
   return raw < 0 ? 0 : raw;
 }
 
@@ -290,7 +291,8 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
     final db = ref.read(databaseProvider);
     final player = await ref.read(currentPlayerProvider.future);
     final pendingBonus = await db.getPendingBonusPoints(player.id);
-    final finalScore = baseScore + pendingBonus;
+    final doubled = await db.consumeDoublePoints(player.id);
+    final finalScore = (baseScore + pendingBonus) * (doubled ? 2 : 1);
     await db.finalizeQuizSession(
       sessionId: current.sessionId,
       finishedAt: now,
@@ -314,6 +316,10 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
     // Reward erst NACH der Wertung dieser Session prüfen — sonst würde der
     // Bonus für genau diese Session schon mit eingerechnet.
     ref.invalidate(streakRewardCheckProvider);
+    // Doppel-Punkte-Boost-Anzeige + Saver-Anzeige aktualisieren
+    // (Saver evtl. durch currentStreak konsumiert, Boost evtl. verbraucht).
+    ref.invalidate(doublePointsActiveProvider);
+    ref.invalidate(streakSaversProvider);
     // Falls eingeloggt: Score in den globalen Leaderboard hochladen.
     // Fire & forget — Offline-first, kein UI-Block bei Fehler.
     if (FirebaseStatus.instance.isReady &&

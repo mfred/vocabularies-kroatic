@@ -11,7 +11,7 @@ Future<void> showScoreExplanationDialog(BuildContext context) {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Punkte = Treffer × 100  +  Zeit-Bonus  −  Joker-Strafen',
+              'Punkte = Treffer × 5  +  Zeit-Bonus  −  Joker-Strafen',
               style: theme.textTheme.bodyMedium?.copyWith(
                 fontFamily: 'monospace',
                 fontWeight: FontWeight.w600,
@@ -19,19 +19,23 @@ Future<void> showScoreExplanationDialog(BuildContext context) {
             ),
             const SizedBox(height: 14),
             const _Bullet(
-              text: '100 Punkte pro richtiger Antwort '
-                  '→ bis zu 1 000 P bei 10/10.',
+              text: '5 Punkte pro richtiger Antwort → bis zu 50 P bei 10/10.',
             ),
             const _Bullet(
-              text: 'Zeit-Bonus: 600 minus Sekunden Spielzeit, '
-                  'gekappt auf 0…600. '
-                  '0 s → +600, 1 min → +540, 5 min → +300, '
-                  '10 min und mehr → 0.',
+              text: 'Zeit-Bonus: 30 minus (Sekunden ÷ 20), gekappt 0…30. '
+                  '0 s → +30, 1 min → +27, 5 min → +15, 10 min und mehr → 0.',
             ),
-            const _Bullet(text: 'Lautschrift-Joker: −15 P pro Nutzung.'),
-            const _Bullet(text: '50/50-Joker: −5 P pro Nutzung.'),
-            const _Bullet(text: 'Bild-Joker: −10 P pro Nutzung.'),
+            const _Bullet(text: 'Lautschrift-Joker: −2 P pro Nutzung.'),
+            const _Bullet(text: '50/50-Joker: −1 P pro Nutzung.'),
+            const _Bullet(text: 'Vorlesen-Joker: −1 P pro Nutzung.'),
             const _Bullet(text: 'Negative Summen werden auf 0 gesetzt.'),
+            const _Bullet(
+              text: 'Streak-Bonus: am Ende jeder Quiz-Session werden '
+                  'angesammelte Streak-Boni auf die Punkte aufgeschlagen.',
+            ),
+            const _Bullet(
+              text: '7-Tage-Streak: das nächste Quiz zählt zusätzlich ×2.',
+            ),
             const _Bullet(
               text: 'Bestenliste: pro Spieler werden alle Punkte über '
                   'alle Spiele im gewählten Zeitraum summiert.',
@@ -46,7 +50,7 @@ Future<void> showScoreExplanationDialog(BuildContext context) {
               child: Text(
                 'Beispiel\n'
                 '8 richtig in 4:12 mit 2× IPA + 1× 50/50\n'
-                '→ 800 + (600 − 252) − (2·5 + 15) = 1 123 P',
+                '→ 40 + (30 − 12) − (2·2 + 1) = 53 P',
                 style: theme.textTheme.bodySmall,
               ),
             ),

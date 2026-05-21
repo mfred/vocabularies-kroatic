@@ -56,6 +56,10 @@ class Players extends Table {
   TextColumn get remoteUserId => text().nullable()();
   IntColumn get pendingBonusPoints =>
       integer().withDefault(const Constant(0))();
+  IntColumn get streakSavers =>
+      integer().withDefault(const Constant(0))();
+  IntColumn get doublePointsRemaining =>
+      integer().withDefault(const Constant(0))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -117,7 +121,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -142,6 +146,20 @@ class AppDatabase extends _$AppDatabase {
           if (from < 5) {
             await m.addColumn(players, players.pendingBonusPoints);
             await m.createTable(streakRewards);
+          }
+          if (from < 6) {
+            await m.addColumn(players, players.streakSavers);
+            await m.addColumn(players, players.doublePointsRemaining);
+            // Skala x20 ab Iteration 21 — alte Scores wären in der neuen
+            // Skala künstlich überhöht. In der Entwicklungsphase wird der
+            // bestehende Highscore-Stand explizit genullt.
+            await customStatement(
+              'UPDATE quiz_sessions SET score_points = 0',
+            );
+            await customStatement(
+              'UPDATE players SET pending_bonus_points = 0',
+            );
+            await customStatement('DELETE FROM streak_rewards');
           }
         },
       );
@@ -411,6 +429,57 @@ class AppDatabase extends _$AppDatabase {
   Future<void> clearPendingBonusPoints(String playerId) async {
     await (update(players)..where((t) => t.id.equals(playerId)))
         .write(const PlayersCompanion(pendingBonusPoints: Value(0)));
+  }
+
+  Future<int> getStreakSavers(String playerId) async {
+    final row = await (select(players)..where((t) => t.id.equals(playerId)))
+        .getSingleOrNull();
+    return row?.streakSavers ?? 0;
+  }
+
+  /// Inkrementiert um 1, aber mit Cap. Liefert den neuen Stand zurück.
+  Future<int> incrementStreakSavers(String playerId, {required int cap}) async {
+    await customStatement(
+      'UPDATE players SET streak_savers = MIN(streak_savers + 1, ?) '
+      'WHERE id = ?',
+      [cap, playerId],
+    );
+    return getStreakSavers(playerId);
+  }
+
+  /// Zieht `count` Saver ab (bis runter auf 0).
+  Future<void> consumeStreakSavers(String playerId, int count) async {
+    if (count <= 0) return;
+    await customStatement(
+      'UPDATE players SET streak_savers = MAX(streak_savers - ?, 0) '
+      'WHERE id = ?',
+      [count, playerId],
+    );
+  }
+
+  Future<int> getDoublePointsRemaining(String playerId) async {
+    final row = await (select(players)..where((t) => t.id.equals(playerId)))
+        .getSingleOrNull();
+    return row?.doublePointsRemaining ?? 0;
+  }
+
+  /// Setzt das Feld auf 1 (überschreibt, statt aufzustapeln).
+  Future<void> grantDoublePoints(String playerId) async {
+    await (update(players)..where((t) => t.id.equals(playerId)))
+        .write(const PlayersCompanion(doublePointsRemaining: Value(1)));
+  }
+
+  /// Konsumiert einen Doppel-Punkte-Boost, falls verfügbar. Liefert true,
+  /// wenn tatsächlich verbraucht wurde.
+  Future<bool> consumeDoublePoints(String playerId) async {
+    final current = await getDoublePointsRemaining(playerId);
+    if (current <= 0) return false;
+    await customStatement(
+      'UPDATE players SET double_points_remaining = double_points_remaining - 1 '
+      'WHERE id = ? AND double_points_remaining > 0',
+      [playerId],
+    );
+    return true;
   }
 
   Future<List<DetailedSessionRow>> topSessionsDetailed({

@@ -7,6 +7,38 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Changed — Iteration 21 (Score-Skala x20 + Streak-Geschenk + Reset)
+- **`computeScore` skaliert um Faktor 20**: Treffer × 100 → × 5,
+  Zeitbonus max 600 → 30 (halbiert sich alle 20 s). Maximum pro Quiz
+  jetzt ~80 P statt ~1 600 P.
+- **Joker-Kosten angepasst**: IPA 15 → 2, 50/50 5 → 1, Vorlesen 8 → 1.
+- **Streak-Reward-Tiers neu**: 3→3, **7→50** (saftiger 7-Tage-Bonus),
+  14→30, 30→100, 60→200, 100→500.
+- **Lokaler Highscore-Reset** in Drift-Migration v5 → v6: alle
+  `quiz_sessions.score_points` und `pending_bonus_points` auf 0,
+  Streak-Reward-Claims gelöscht. Cloud-Leaderboard (Firestore) muss
+  der User manuell zurücksetzen — Aggregat mischt sich sonst
+  temporär, bis genug neue Sessions hochgeladen sind.
+- Score-Erklärungs-Dialog mit neuer Skala + neuem Beispiel.
+
+### Added — Iteration 21 (7-Tage-Streak-Geschenk, dreiteilig)
+- **Saftige Bonuspunkte**: 7-Tage-Stufe gibt 50 P (~ein ganzes Quiz wert).
+- **Streak-Schoner**: ein verpasster Tag wird verziehen (max. 3 im
+  Reservoir gleichzeitig). `players.streak_savers` Drift-Spalte;
+  `StreakService.currentStreak` konsumiert Saver automatisch und
+  persistiert. Tests decken Single-Lücke, Doppel-Lücke und Cap ab.
+- **Doppel-Punkte-Boost**: nächstes Quiz nach Erreichen von Tag 7
+  zählt ×2. `players.double_points_remaining` Drift-Spalte. Banner
+  im `QuizSetupScreen` zeigt aktiven Boost an.
+- **Sonder-Dialog** für Tag 7: alle drei Geschenke werden aufgezählt;
+  andere Stufen behalten den normalen Bonus-Dialog.
+
+### Added — Roadmap (späteres Release)
+- **Avatar-System**: Initialen-Avatar mit Markenpalette als Phase A,
+  freischaltbare Avatar-Sets (Globus, Buch, Sprechblase…) bei
+  Streak-/Score-Meilensteinen als Phase B. Persistenz via neuer
+  Player-Spalte + Firestore-Sync. Siehe PROJECT.md § 12.
+
 ### Fixed — Iteration 20 (Karo-Muster im Splash + hellerer Icon-BG)
 - **Karo-Muster im Splash entfernt**: Die Quell-PNGs (`bunt.png`/`sw.png`)
   hatten das Transparenz-Karo direkt in die RGB-Daten geflattet (Alpha=255

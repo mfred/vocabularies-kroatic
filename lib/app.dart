@@ -610,6 +610,36 @@ void _showStreakRewardDialog(BuildContext context, StreakReward reward) {
     context: context,
     builder: (ctx) {
       final theme = Theme.of(ctx);
+      if (reward.streakDay == 7) {
+        // Sondervariante: dreiteiliges Geschenk (Bonus + Saver + Doppel-Punkte).
+        return AlertDialog(
+          icon: const Text('🎉🔥🎁', style: TextStyle(fontSize: 36)),
+          title: const Text('Eine Woche durchgehalten!'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Sieben Tage in Folge gespielt — du bekommst gleich drei '
+                'Geschenke obendrauf:',
+                style: theme.textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 12),
+              _GiftLine(emoji: '💰', text: '+${reward.bonusPoints} Bonuspunkte für dein nächstes Quiz'),
+              const SizedBox(height: 4),
+              _GiftLine(emoji: '🛡️', text: '1× Streak-Schoner — verpass einen Tag, ohne dass dein Streak bricht'),
+              const SizedBox(height: 4),
+              _GiftLine(emoji: '✖️2️⃣', text: 'Doppel-Punkte-Boost: nächstes Quiz zählt ×2'),
+            ],
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Weiter rocken!'),
+            ),
+          ],
+        );
+      }
       return AlertDialog(
         icon: const Text('🎉', style: TextStyle(fontSize: 40)),
         title: Text('Tag ${reward.streakDay} erreicht!'),
@@ -626,4 +656,24 @@ void _showStreakRewardDialog(BuildContext context, StreakReward reward) {
       );
     },
   );
+}
+
+class _GiftLine extends StatelessWidget {
+  const _GiftLine({required this.emoji, required this.text});
+
+  final String emoji;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(emoji, style: const TextStyle(fontSize: 20)),
+        const SizedBox(width: 8),
+        Expanded(child: Text(text, style: theme.textTheme.bodyMedium)),
+      ],
+    );
+  }
 }

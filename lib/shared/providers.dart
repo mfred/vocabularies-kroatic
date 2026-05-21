@@ -115,6 +115,21 @@ final currentStreakProvider = FutureProvider.autoDispose<int>((ref) async {
   return ref.watch(streakServiceProvider).currentStreak(player.id);
 });
 
+/// True, wenn der nächste Quiz-Score durch das 7-Tage-Geschenk verdoppelt
+/// wird. Wird nach jedem Quiz invalidiert (im `_finish`-Pfad).
+final doublePointsActiveProvider =
+    FutureProvider.autoDispose<bool>((ref) async {
+  final player = await ref.watch(currentPlayerProvider.future);
+  final remaining =
+      await ref.watch(databaseProvider).getDoublePointsRemaining(player.id);
+  return remaining > 0;
+});
+
+final streakSaversProvider = FutureProvider.autoDispose<int>((ref) async {
+  final player = await ref.watch(currentPlayerProvider.future);
+  return ref.watch(databaseProvider).getStreakSavers(player.id);
+});
+
 class StreakDiagnostics {
   const StreakDiagnostics({
     required this.playerId,
