@@ -14,7 +14,7 @@
         <package android:name="com.google.android.tts" />
     </queries>
     <application
-        android:label="vocabularies_kroatic"
+        android:label="Vokabeltrainer"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

@@ -7,6 +7,21 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Added — Iteration 18 (App-Icon + Splash + Launcher-Name)
+- **Eigenes App-Icon** ersetzt den Flutter-Default. Master-Assets liegen
+  unter `assets/branding/logo_foreground.png` (bunte Vorder-Variante mit
+  Globus, Buch und Sprechblase) und `logo_monochrome.png` (Silhouette für
+  Android-13-Themed-Icons).
+- **Adaptive Icon** mit dunkelgrünem Hintergrund `#2E5C42`, generiert via
+  `flutter_launcher_icons` — alle Density-Buckets, Round-Icon und
+  Monochrome-Variante automatisch ableitbar.
+- **Splash-Screen** mit Logo zentriert auf demselben Grün, generiert via
+  `flutter_native_splash` (inkl. Android-12-SplashScreen-API und
+  Dark-Mode-Variante).
+- **`android:label`** in `AndroidManifest.xml` von `vocabularies_kroatic`
+  auf **`Vokabeltrainer`** geändert — der Launcher zeigt jetzt den
+  schönen Namen unter dem Icon.
+
 ### Changed — Iteration 17.1 (Versions-Schema)
 - App-Version umgestellt von `1.0.0+14` auf **`1.0.17`** (MAJOR.MINOR.ITERATION).
   Anzeige im Drawer-Footer und im Über-Dialog folgt automatisch.
