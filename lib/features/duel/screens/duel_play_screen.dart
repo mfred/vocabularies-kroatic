@@ -1,31 +1,54 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../quiz/models/quiz_direction.dart';
 import '../controllers/duel_play_controller.dart';
+import '../duel_providers.dart';
 import '../models/duel_pair.dart';
 import '../widgets/countdown_overlay.dart';
 import '../widgets/duel_round_board.dart';
 import '../widgets/duel_round_timer_chip.dart';
+import 'duel_result_compare_screen.dart';
 import 'duel_summary_screen.dart';
 
-/// Orchestriert die drei Runden mit Countdown vor jeder Runde und der
-/// Übergangs-Anzeige zwischen Runden. Nach der letzten Runde push auf den
-/// Summary-Screen.
-class DuelPlayScreen extends StatefulWidget {
+/// Orchestriert die drei Runden. Zwei Modi:
+/// - Free play (Challenger): `duelId == null` → nach Ende → DuelSummaryScreen
+///   mit Option zum Herausfordern.
+/// - Opponent: `duelId != null` → nach Ende → submitOpponentResult +
+///   DuelResultCompareScreen.
+class DuelPlayScreen extends ConsumerStatefulWidget {
   const DuelPlayScreen({
     super.key,
     required this.lessonTitle,
+    required this.lessonId,
+    required this.direction,
     required this.rounds,
+    this.duelId,
+    this.challengerTotalMs,
+    this.challengerUid,
+    this.opponentUid,
   });
 
   final String lessonTitle;
+  final String lessonId;
+  final QuizDirection direction;
   final List<DuelRound> rounds;
 
+  /// Wenn gesetzt: Opponent-Modus, Ergebnis wird an Firestore submitted.
+  final String? duelId;
+  final int? challengerTotalMs;
+  final String? challengerUid;
+  final String? opponentUid;
+
+  bool get isOpponentMode => duelId != null;
+
   @override
-  State<DuelPlayScreen> createState() => _DuelPlayScreenState();
+  ConsumerState<DuelPlayScreen> createState() => _DuelPlayScreenState();
 }
 
-class _DuelPlayScreenState extends State<DuelPlayScreen> {
+class _DuelPlayScreenState extends ConsumerState<DuelPlayScreen> {
   late final DuelPlayController _controller;
+  bool _submitted = false;
 
   @override
   void initState() {
@@ -46,19 +69,53 @@ class _DuelPlayScreenState extends State<DuelPlayScreen> {
 
   void _onControllerChange() {
     if (mounted) setState(() {});
-    if (_controller.phase == DuelPhase.allDone) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => DuelSummaryScreen(
-              lessonTitle: widget.lessonTitle,
-              result: _controller.buildResult(),
-            ),
-          ),
-        );
-      });
+    if (_controller.phase == DuelPhase.allDone && !_submitted) {
+      _submitted = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _onAllDone());
     }
+  }
+
+  Future<void> _onAllDone() async {
+    if (!mounted) return;
+    final result = _controller.buildResult();
+
+    if (widget.isOpponentMode) {
+      // In Firestore submitten und zum Vergleichs-Screen wechseln.
+      final duelId = widget.duelId!;
+      try {
+        await ref.read(duelServiceProvider).submitOpponentResult(
+              duelId: duelId,
+              opponentRun: result,
+              challengerTotalMs: widget.challengerTotalMs ?? 0,
+              challengerUid: widget.challengerUid ?? '',
+              opponentUid: widget.opponentUid ?? '',
+            );
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Konnte Ergebnis nicht senden: $e')),
+        );
+      }
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => DuelResultCompareScreen(duelId: duelId),
+        ),
+      );
+      return;
+    }
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => DuelSummaryScreen(
+          lessonTitle: widget.lessonTitle,
+          lessonId: widget.lessonId,
+          direction: widget.direction,
+          rounds: widget.rounds,
+          result: result,
+        ),
+      ),
+    );
   }
 
   @override

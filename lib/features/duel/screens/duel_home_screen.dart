@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/database.dart';
+import '../../../shared/firebase_status.dart';
 import '../../../shared/providers.dart';
 import '../../quiz/models/quiz_direction.dart';
 import '../duel_providers.dart';
+import '../models/duel.dart';
 import '../services/duel_set_builder.dart';
+import '../widgets/duel_incoming_dialog.dart';
 import 'duel_play_screen.dart';
 
-/// Übersicht: Richtung wählen, Lektion antippen → Duell-Probe-Spiel starten.
+/// Übersicht: Eingehende Duelle, eigene offene Challenges, dann Lektionsauswahl
+/// für ein neues Duell.
 class DuelHomeScreen extends ConsumerWidget {
   const DuelHomeScreen({super.key});
 
@@ -17,52 +21,319 @@ class DuelHomeScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final lessonsAsync = ref.watch(cachedLessonsProvider);
     final direction = ref.watch(preferredDirectionProvider);
+    final firebaseReady = FirebaseStatus.instance.isReady;
+    final authUser =
+        firebaseReady ? ref.watch(authStateProvider).value : null;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Duell'),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _IntroBox(),
-              const SizedBox(height: 16),
-              _DirectionRow(
-                direction: direction,
-                onToggle: () =>
-                    ref.read(preferredDirectionProvider.notifier).toggle(),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Lektion auswählen',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
+        child: lessonsAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Text('Fehler: $e')),
+          data: (lessons) => CustomScrollView(
+            slivers: [
+              if (authUser != null) ...[
+                const SliverToBoxAdapter(child: _IncomingSection()),
+                const SliverToBoxAdapter(child: _OutgoingSection()),
+              ],
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  child: _IntroBox(),
                 ),
               ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: lessonsAsync.when(
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => Center(
-                    child: Text(
-                      'Fehler: $e',
-                      style: theme.textTheme.bodyMedium,
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+                  child: _DirectionRow(
+                    direction: direction,
+                    onToggle: () => ref
+                        .read(preferredDirectionProvider.notifier)
+                        .toggle(),
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+                  child: Text(
+                    'Neues Duell — Lektion auswählen',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  data: (lessons) => _LessonList(
-                    lessons: lessons,
-                    direction: direction,
-                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                sliver: SliverList.separated(
+                  itemCount: lessons.length,
+                  itemBuilder: (context, i) {
+                    final lesson = lessons[i];
+                    final total = lesson.wordCount +
+                        lesson.phraseCount +
+                        lesson.sentenceCount;
+                    final enabled = total >= kDuelMinLessonItems;
+                    return _LessonTile(
+                      lesson: lesson,
+                      totalItems: total,
+                      enabled: enabled,
+                      onTap: () =>
+                          _startDuel(context, ref, lesson, direction),
+                    );
+                  },
+                  separatorBuilder: (_, _) => const SizedBox(height: 10),
                 ),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Future<void> _startDuel(
+    BuildContext context,
+    WidgetRef ref,
+    LessonsCacheData lesson,
+    QuizDirection direction,
+  ) async {
+    final builder = ref.read(duelSetBuilderProvider);
+    final rounds = await builder.build(
+      lessonId: lesson.lessonId,
+      direction: direction,
+    );
+    if (!context.mounted) return;
+    if (rounds == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Lektion hat zu wenige Vokabeln für ein Duell '
+            '(mindestens $kDuelMinLessonItems benötigt).',
+          ),
+        ),
+      );
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => DuelPlayScreen(
+          lessonTitle: lesson.titleDe,
+          lessonId: lesson.lessonId,
+          direction: direction,
+          rounds: rounds,
+        ),
+      ),
+    );
+  }
+}
+
+class _IncomingSection extends ConsumerWidget {
+  const _IncomingSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final async = ref.watch(incomingPendingDuelsProvider);
+    return async.when(
+      loading: () => const SizedBox.shrink(),
+      error: (e, _) => const SizedBox.shrink(),
+      data: (duels) {
+        if (duels.isEmpty) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Text('⚔️', style: TextStyle(fontSize: 20)),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Eingehende Duelle (${duels.length})',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              for (final duel in duels) ...[
+                _IncomingDuelTile(duel: duel),
+                const SizedBox(height: 8),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _IncomingDuelTile extends ConsumerWidget {
+  const _IncomingDuelTile({required this.duel});
+
+  final Duel duel;
+
+  Future<void> _open(BuildContext context, WidgetRef ref) async {
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (_) => DuelIncomingDialog(duel: duel),
+    );
+    if (choice == null || !context.mounted) return;
+    final service = ref.read(duelServiceProvider);
+    if (choice == 'decline') {
+      await service.declineDuel(duel.id);
+      return;
+    }
+    // Accept
+    try {
+      await service.acceptDuel(duel.id);
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Konnte nicht annehmen: $e')),
+      );
+      return;
+    }
+    if (!context.mounted) return;
+    final direction = duel.direction == 'hr_de'
+        ? QuizDirection.hrToDe
+        : QuizDirection.deToHr;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => DuelPlayScreen(
+          lessonTitle: duel.lessonTitle,
+          lessonId: duel.lessonId,
+          direction: direction,
+          rounds: duel.rounds,
+          duelId: duel.id,
+          challengerTotalMs: duel.challengerResult.totalMs,
+          challengerUid: duel.challengerUid,
+          opponentUid: duel.opponentUid,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Material(
+      color: scheme.tertiaryContainer,
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => _open(context, ref),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: scheme.tertiary,
+                child: Text(
+                  duel.challengerDisplayName.isEmpty
+                      ? '?'
+                      : duel.challengerDisplayName.substring(0, 1).toUpperCase(),
+                  style: TextStyle(color: scheme.onTertiary),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${duel.challengerDisplayName} fordert dich heraus',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: scheme.onTertiaryContainer,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      '${duel.lessonTitle} · '
+                      'Zeit zu schlagen: ${(duel.challengerResult.totalMs / 1000).toStringAsFixed(2)} s',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onTertiaryContainer,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: scheme.onTertiaryContainer),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OutgoingSection extends ConsumerWidget {
+  const _OutgoingSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final async = ref.watch(myPendingChallengesProvider);
+    return async.when(
+      loading: () => const SizedBox.shrink(),
+      error: (e, _) => const SizedBox.shrink(),
+      data: (duels) {
+        if (duels.isEmpty) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Du wartest noch …',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 6),
+              for (final duel in duels) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: scheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: scheme.outlineVariant),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.hourglass_top,
+                          color: scheme.onSurfaceVariant, size: 18),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          '${duel.opponentDisplayName} · ${duel.lessonTitle}',
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                      ),
+                      Text(
+                        '${(duel.challengerResult.totalMs / 1000).toStringAsFixed(2)} s',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 6),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -134,75 +405,6 @@ class _DirectionRow extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _LessonList extends ConsumerWidget {
-  const _LessonList({required this.lessons, required this.direction});
-
-  final List<LessonsCacheData> lessons;
-  final QuizDirection direction;
-
-  Future<void> _startDuel(
-    BuildContext context,
-    WidgetRef ref,
-    LessonsCacheData lesson,
-  ) async {
-    final builder = ref.read(duelSetBuilderProvider);
-    final rounds = await builder.build(
-      lessonId: lesson.lessonId,
-      direction: direction,
-    );
-    if (!context.mounted) return;
-    if (rounds == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Lektion hat zu wenige Vokabeln für ein Duell '
-            '(mindestens $kDuelMinLessonItems benötigt).',
-          ),
-        ),
-      );
-      return;
-    }
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => DuelPlayScreen(
-          lessonTitle: lesson.titleDe,
-          rounds: rounds,
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    if (lessons.isEmpty) {
-      return Center(
-        child: Text(
-          'Noch keine Lektionen geladen.',
-          style: theme.textTheme.bodyMedium,
-        ),
-      );
-    }
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      itemBuilder: (context, index) {
-        final lesson = lessons[index];
-        final total =
-            lesson.wordCount + lesson.phraseCount + lesson.sentenceCount;
-        final enabled = total >= kDuelMinLessonItems;
-        return _LessonTile(
-          lesson: lesson,
-          totalItems: total,
-          enabled: enabled,
-          onTap: () => _startDuel(context, ref, lesson),
-        );
-      },
-      separatorBuilder: (_, _) => const SizedBox(height: 10),
-      itemCount: lessons.length,
     );
   }
 }

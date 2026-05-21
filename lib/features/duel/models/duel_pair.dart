@@ -14,6 +14,18 @@ class DuelPair {
   final String itemId;
   final String leftText;
   final String rightText;
+
+  Map<String, dynamic> toMap() => {
+        'itemId': itemId,
+        'left': leftText,
+        'right': rightText,
+      };
+
+  factory DuelPair.fromMap(Map<String, dynamic> map) => DuelPair(
+        itemId: map['itemId'] as String? ?? '',
+        leftText: map['left'] as String? ?? '',
+        rightText: map['right'] as String? ?? '',
+      );
 }
 
 /// Eine Runde besteht aus 4–5 Paaren. `pairs` ist die natürliche Reihenfolge
@@ -30,4 +42,19 @@ class DuelRound {
     final byId = {for (final p in pairs) p.itemId: p};
     return [for (final id in rightOrder) byId[id]!];
   }
+
+  Map<String, dynamic> toMap() => {
+        'pairs': [for (final p in pairs) p.toMap()],
+        'rightOrder': rightOrder,
+      };
+
+  factory DuelRound.fromMap(Map<String, dynamic> map) => DuelRound(
+        pairs: [
+          for (final m in (map['pairs'] as List? ?? const []))
+            DuelPair.fromMap(Map<String, dynamic>.from(m as Map)),
+        ],
+        rightOrder: (map['rightOrder'] as List? ?? const [])
+            .map((e) => e as String)
+            .toList(),
+      );
 }

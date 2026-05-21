@@ -1,18 +1,41 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../friends/friends_providers.dart';
+import '../../friends/models/user_profile.dart';
+import '../../quiz/models/quiz_direction.dart';
+import '../../../shared/firebase_status.dart';
+import '../../../shared/providers.dart';
+import '../duel_providers.dart';
+import '../models/duel_pair.dart';
 import '../models/duel_run_result.dart';
+import '../widgets/duel_friend_picker_dialog.dart';
 
-/// Endbild nach 3 Runden: Rundenzeiten + Gesamtzeit, plus Platzhalter für die
-/// Herausforderungs-Funktion (kommt in Iteration 1.0.24).
-class DuelSummaryScreen extends StatelessWidget {
+/// Endbild nach 3 Runden Challenger-Lauf: Rundenzeiten + Gesamtzeit, plus
+/// "Freund herausfordern". Bei Tap öffnet sich der FriendPicker; nach
+/// Auswahl wird ein Firestore-Duel-Doc angelegt.
+class DuelSummaryScreen extends ConsumerStatefulWidget {
   const DuelSummaryScreen({
     super.key,
     required this.lessonTitle,
+    required this.lessonId,
+    required this.direction,
+    required this.rounds,
     required this.result,
   });
 
   final String lessonTitle;
+  final String lessonId;
+  final QuizDirection direction;
+  final List<DuelRound> rounds;
   final DuelRunResult result;
+
+  @override
+  ConsumerState<DuelSummaryScreen> createState() => _DuelSummaryScreenState();
+}
+
+class _DuelSummaryScreenState extends ConsumerState<DuelSummaryScreen> {
+  bool _sending = false;
 
   String _formatMs(int ms) {
     final totalSeconds = ms ~/ 1000;
@@ -26,10 +49,62 @@ class DuelSummaryScreen extends StatelessWidget {
     return '${(ms / 1000).toStringAsFixed(2)} s';
   }
 
+  Future<void> _challengeFriend() async {
+    final me = ref.read(myUserProfileProvider).value;
+    if (me == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Bitte zuerst anmelden, um Freunde herauszufordern.',
+          ),
+        ),
+      );
+      return;
+    }
+    final picked = await showDialog<UserProfile>(
+      context: context,
+      builder: (_) => const DuelFriendPickerDialog(),
+    );
+    if (picked == null || !mounted) return;
+
+    setState(() => _sending = true);
+    try {
+      await ref.read(duelServiceProvider).createChallenge(
+            challengerUid: me.uid,
+            challengerDisplayName: me.displayName,
+            opponentUid: picked.uid,
+            opponentDisplayName: picked.displayName,
+            lessonId: widget.lessonId,
+            lessonTitle: widget.lessonTitle,
+            direction: widget.direction,
+            rounds: widget.rounds,
+            challengerRun: widget.result,
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Herausforderung an ${picked.displayName} gesendet.'),
+        ),
+      );
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Fehler: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final firebaseReady = FirebaseStatus.instance.isReady;
+    final authUser =
+        firebaseReady ? ref.watch(authStateProvider).value : null;
+    final canChallenge = firebaseReady && authUser != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -39,7 +114,7 @@ class DuelSummaryScreen extends StatelessWidget {
           children: [
             const Text('Duell beendet'),
             Text(
-              lessonTitle,
+              widget.lessonTitle,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: scheme.onSurfaceVariant,
               ),
@@ -71,7 +146,7 @@ class DuelSummaryScreen extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                _formatMs(result.totalMs),
+                _formatMs(widget.result.totalMs),
                 textAlign: TextAlign.center,
                 style: theme.textTheme.displayMedium?.copyWith(
                   color: scheme.primary,
@@ -79,10 +154,10 @@ class DuelSummaryScreen extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              if (result.totalPenaltyMs > 0) ...[
+              if (widget.result.totalPenaltyMs > 0) ...[
                 const SizedBox(height: 4),
                 Text(
-                  'inkl. ${_formatMs(result.totalPenaltyMs)} Strafzeit',
+                  'inkl. ${_formatMs(widget.result.totalPenaltyMs)} Strafzeit',
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: scheme.error,
@@ -99,7 +174,7 @@ class DuelSummaryScreen extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    for (var i = 0; i < result.roundsMs.length; i++) ...[
+                    for (var i = 0; i < widget.result.roundsMs.length; i++) ...[
                       if (i > 0)
                         Divider(
                           height: 16,
@@ -107,8 +182,8 @@ class DuelSummaryScreen extends StatelessWidget {
                         ),
                       _RoundRow(
                         index: i + 1,
-                        ms: result.roundsMs[i],
-                        penaltyMs: result.penaltiesMs[i],
+                        ms: widget.result.roundsMs[i],
+                        penaltyMs: widget.result.penaltiesMs[i],
                         format: _formatMs,
                       ),
                     ],
@@ -117,17 +192,17 @@ class DuelSummaryScreen extends StatelessWidget {
               ),
               const Spacer(),
               FilledButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Herausforderungen an Freunde kommen in der nächsten Iteration.',
-                      ),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.send),
-                label: const Text('Freund herausfordern'),
+                onPressed: _sending || !canChallenge ? null : _challengeFriend,
+                icon: _sending
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.send),
+                label: Text(canChallenge
+                    ? 'Freund herausfordern'
+                    : 'Login erforderlich'),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
@@ -214,3 +289,4 @@ class _RoundRow extends StatelessWidget {
     );
   }
 }
+
