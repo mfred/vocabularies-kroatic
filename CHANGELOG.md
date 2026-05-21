@@ -7,6 +7,14 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Changed — Iteration 17.1 (Versions-Schema)
+- App-Version umgestellt von `1.0.0+14` auf **`1.0.17`** (MAJOR.MINOR.ITERATION).
+  Anzeige im Drawer-Footer und im Über-Dialog folgt automatisch.
+- Konvention dokumentiert in `lib/shared/app_info.dart`: pro Iteration
+  PATCH +1, MINOR steigt nur bei größeren Feature-Paketen, MAJOR bei
+  Generations-Sprüngen. `kAppBuild` entfällt; `pubspec.yaml` hält den
+  `+N`-Build-Code (Android `versionCode`) jetzt synchron mit dem Patch.
+
 ### Changed — Iteration 17 (Bild-Joker → Vorlesen-Joker)
 - **🔊 Vorlesen** ersetzt **🖼️ Bild**. Der dritte Joker spielt jetzt die
   richtige Antwort per TTS in der Zielsprache vor (8 P statt 10 P).
