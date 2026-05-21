@@ -1,16 +1,29 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
 import 'firebase_options.dart';
 import 'shared/firebase_status.dart';
 
+const Duration _kSplashMinHold = Duration(milliseconds: 1500);
+
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  final binding = WidgetsFlutterBinding.ensureInitialized();
+  // Splash bleibt sichtbar, bis wir ihn unten aktiv entfernen — sonst
+  // verschwindet er, sobald der erste Frame rendert (~200 ms).
+  FlutterNativeSplash.preserve(widgetsBinding: binding);
+  final startedAt = DateTime.now();
   await _tryInitFirebase();
   runApp(const ProviderScope(child: VocabulariesApp()));
+  final elapsed = DateTime.now().difference(startedAt);
+  final remaining = _kSplashMinHold - elapsed;
+  if (remaining > Duration.zero) {
+    await Future<void>.delayed(remaining);
+  }
+  FlutterNativeSplash.remove();
 }
 
 Future<void> _tryInitFirebase() async {

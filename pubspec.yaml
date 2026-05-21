@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.18+18
+version: 1.0.19+19
 
 environment:
   sdk: ^3.11.5
@@ -49,6 +49,8 @@ dependencies:
   firebase_core: ^3.6.0
   firebase_auth: ^5.3.1
   cloud_firestore: ^5.4.4
+  # Wird zur Laufzeit gebraucht (preserve/remove), darum hier statt in dev_dependencies.
+  flutter_native_splash: ^2.4.6
 
 dev_dependencies:
   flutter_test:
@@ -65,25 +67,24 @@ dev_dependencies:
   freezed: ^3.2.5
   json_serializable: ^6.14.0
   flutter_launcher_icons: ^0.14.4
-  flutter_native_splash: ^2.4.6
 
 flutter_launcher_icons:
   android: "ic_launcher"
   ios: false
   image_path: "assets/branding/logo_foreground.png"
-  adaptive_icon_background: "#2E5C42"
+  adaptive_icon_background: "#7CB58F"
   adaptive_icon_foreground: "assets/branding/logo_foreground.png"
   adaptive_icon_monochrome: "assets/branding/logo_monochrome.png"
   min_sdk_android: 21
 
 flutter_native_splash:
-  color: "#2E5C42"
+  color: "#7CB58F"
   image: "assets/branding/logo_splash.png"
-  color_dark: "#2E5C42"
+  color_dark: "#7CB58F"
   image_dark: "assets/branding/logo_splash.png"
   android_12:
     image: "assets/branding/logo_splash.png"
-    color: "#2E5C42"
+    color: "#7CB58F"
   android: true
   ios: false
   web: false

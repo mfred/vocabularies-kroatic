@@ -7,6 +7,18 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Changed — Iteration 19 (Splash länger sichtbar, hellerer Hintergrund)
+- **Splash-Mindestdauer 1.5 s**: `FlutterNativeSplash.preserve` in `main.dart`
+  hält die Anzeige aktiv, bis der Firebase-Init durch ist *und* mindestens
+  1500 ms vergangen sind — vorher war der Splash nur kurz sichtbar, weil
+  Flutter ihn beim ersten Frame entfernt.
+- **Hintergrundfarbe heller**: `#2E5C42` (Dunkelgrün) → **`#7CB58F`**
+  (helles Salbei-Grün) — sowohl für den Adaptive-Icon-Background als
+  auch den Splash. Lässt den dunkelgrünen Kreis im Vordergrund besser
+  pop.
+- `flutter_native_splash` umgezogen von `dev_dependencies` nach
+  `dependencies`, weil `preserve/remove` zur Laufzeit gebraucht wird.
+
 ### Added — Iteration 18 (App-Icon + Splash + Launcher-Name)
 - **Eigenes App-Icon** ersetzt den Flutter-Default. Master-Assets liegen
   unter `assets/branding/logo_foreground.png` (bunte Vorder-Variante mit
