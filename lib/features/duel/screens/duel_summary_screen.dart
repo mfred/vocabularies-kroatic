@@ -48,8 +48,7 @@ class DuelSummaryScreen extends StatelessWidget {
         ),
         leading: IconButton(
           icon: const Icon(Icons.close),
-          onPressed: () =>
-              Navigator.of(context).popUntil((r) => r.isFirst || r.settings.name == '/duel-home'),
+          onPressed: () => Navigator.of(context).pop(),
         ),
       ),
       body: SafeArea(
