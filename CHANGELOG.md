@@ -7,6 +7,23 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Fixed — Iteration 20 (Karo-Muster im Splash + hellerer Icon-BG)
+- **Karo-Muster im Splash entfernt**: Die Quell-PNGs (`bunt.png`/`sw.png`)
+  hatten das Transparenz-Karo direkt in die RGB-Daten geflattet (Alpha=255
+  überall). Auf Android-12-Splash schien das Karo durch. Fix per
+  zweistufiger `ffmpeg geq`-Pipeline:
+  1. Grauwerte (R≈G≈B) im mittleren Helligkeitsbereich → Alpha=0 (Karo
+     außerhalb des grünen Kreises wird transparent).
+  2. „grünlich-grau" innerhalb des Kreises → ersetzt mit solidem
+     Forst-Grün `#314e32` (sonst zeigt der semi-transparente Design-
+     Kreis weiter sein Karo).
+- **`logo_splash.png`** neu generiert mit Sage-Hintergrund (`#7CB58F`)
+  fest eingebrannt — keine Transparenz mehr im Splash-Asset.
+- **Adaptive-Icon-Hintergrund heller**: `#7CB58F` → **`#C5E0CD`** (heller
+  Mint-Ton) — der dunkelgrüne Motiv-Kreis pop deutlicher auf dem
+  Launcher-Bildschirm.
+- Splash-Hintergrund bleibt `#7CB58F` (unverändert — User mag die Farbe).
+
 ### Changed — Iteration 19 (Splash länger sichtbar, hellerer Hintergrund)
 - **Splash-Mindestdauer 1.5 s**: `FlutterNativeSplash.preserve` in `main.dart`
   hält die Anzeige aktiv, bis der Firebase-Init durch ist *und* mindestens
