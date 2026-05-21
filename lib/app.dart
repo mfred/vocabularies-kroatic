@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/database/database.dart' hide StreakReward;
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/profile_screen.dart';
+import 'features/duel/screens/duel_home_screen.dart';
 import 'features/highscore/screens/highscore_screen.dart';
 import 'features/lessons/lesson_menu_screen.dart';
 import 'features/quiz/models/quiz_direction.dart';
@@ -183,6 +184,7 @@ class _LessonOverview extends ConsumerWidget {
             child:
                 _SyncBanner(syncResult: syncResult, totalItems: totalItems),
           ),
+          const SliverToBoxAdapter(child: _DuelEntryCard()),
           if (lessons.isEmpty)
             SliverFillRemaining(
               hasScrollBody: false,
@@ -353,6 +355,64 @@ class _SyncBannerState extends State<_SyncBanner> {
             style: theme.textTheme.titleMedium?.copyWith(color: fg),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _DuelEntryCard extends StatelessWidget {
+  const _DuelEntryCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: Material(
+        color: scheme.primaryContainer,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const DuelHomeScreen(),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            child: Row(
+              children: [
+                Icon(Icons.bolt, size: 36, color: scheme.onPrimaryContainer),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Duell',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          color: scheme.onPrimaryContainer,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '3 Runden auf Zeit — schnelles Vokabel-Paaren',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: scheme.onPrimaryContainer,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: scheme.onPrimaryContainer),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
