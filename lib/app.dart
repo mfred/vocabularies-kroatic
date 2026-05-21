@@ -7,6 +7,8 @@ import 'core/database/database.dart' hide StreakReward;
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/profile_screen.dart';
 import 'features/duel/screens/duel_home_screen.dart';
+import 'features/friends/friends_providers.dart';
+import 'features/friends/screens/friends_screen.dart';
 import 'features/highscore/screens/highscore_screen.dart';
 import 'features/lessons/lesson_menu_screen.dart';
 import 'features/quiz/models/quiz_direction.dart';
@@ -67,6 +69,9 @@ class SyncStatusScreen extends ConsumerWidget {
         if (context.mounted) _showStreakRewardDialog(context, reward);
       });
     });
+
+    // Sicherstellen, dass nach Login das Firestore-Profil existiert.
+    ref.watch(ensureProfileOnLoginProvider);
 
     return Scaffold(
       drawer: const _AppDrawer(),
@@ -529,6 +534,15 @@ class _AppDrawer extends ConsumerWidget {
                 );
               },
             ),
+            if (firebaseReady && authUser != null)
+              _FriendsDrawerEntry()
+            else if (firebaseReady)
+              ListTile(
+                enabled: false,
+                leading: const Icon(Icons.group_outlined),
+                title: const Text('Freunde'),
+                subtitle: const Text('Anmelden, um Freunde hinzuzufügen'),
+              ),
             if (firebaseReady)
               ListTile(
                 leading: Icon(authUser == null
@@ -624,6 +638,43 @@ class _AppDrawer extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _FriendsDrawerEntry extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final incomingCount =
+        ref.watch(incomingFriendRequestsProvider).value?.length ?? 0;
+    return ListTile(
+      leading: const Icon(Icons.group_outlined),
+      title: const Text('Freunde'),
+      trailing: incomingCount > 0
+          ? Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.tertiary,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '$incomingCount',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onTertiary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            )
+          : null,
+      onTap: () {
+        Navigator.of(context).pop();
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => const FriendsScreen(),
+          ),
+        );
+      },
     );
   }
 }

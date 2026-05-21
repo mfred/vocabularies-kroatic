@@ -16,6 +16,31 @@
         { "fieldPath": "durationMs", "order": "ASCENDING" },
         { "fieldPath": "finishedAt", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "friend_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "toUid", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "friend_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "fromUid", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "friend_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "fromUid", "order": "ASCENDING" },
+        { "fieldPath": "toUid", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
