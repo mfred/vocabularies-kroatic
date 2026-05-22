@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/tablet_constrained.dart';
 import '../models/quiz_direction.dart';
 
 class QuizSummaryScreen extends StatelessWidget {
@@ -43,7 +44,8 @@ class QuizSummaryScreen extends StatelessWidget {
           onPressed: onBack,
         ),
       ),
-      body: Padding(
+      body: TabletConstrained(
+        child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -128,6 +130,7 @@ class QuizSummaryScreen extends StatelessWidget {
               ],
             ),
           ],
+        ),
         ),
       ),
     );

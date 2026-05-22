@@ -36,12 +36,38 @@ class AuthService {
           code: 'no-user', message: 'Registrierung fehlgeschlagen.');
     }
     await user.updateDisplayName(displayName.trim());
+    // Double-Opt-In: Bestätigungs-Mail direkt nach Anlegen versenden.
+    try {
+      await user.sendEmailVerification();
+    } catch (_) {
+      // Nicht blockierend — User kann die Mail auch später erneut anfordern.
+    }
     await user.reload();
     return _auth.currentUser ?? user;
   }
 
   Future<void> sendPasswordResetEmail(String email) {
     return _auth.sendPasswordResetEmail(email: email.trim());
+  }
+
+  /// Verschickt erneut die Bestätigungs-Mail an den aktuell eingeloggten User.
+  Future<void> resendVerificationEmail() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw FirebaseAuthException(
+          code: 'no-user', message: 'Nicht eingeloggt.');
+    }
+    await user.sendEmailVerification();
+  }
+
+  /// Lädt den User-State neu und gibt zurück, ob die Email mittlerweile
+  /// bestätigt ist. Wird vom Verify-Email-Screen aufgerufen, wenn der User
+  /// den Bestätigungs-Link extern geklickt hat.
+  Future<bool> reloadAndIsVerified() async {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+    await user.reload();
+    return _auth.currentUser?.emailVerified ?? false;
   }
 
   Future<void> signOut() => _auth.signOut();

@@ -8,6 +8,7 @@ import '../models/duel_pair.dart';
 import '../widgets/countdown_overlay.dart';
 import '../widgets/duel_round_board.dart';
 import '../widgets/duel_round_timer_chip.dart';
+import '../../../shared/widgets/tablet_constrained.dart';
 import 'duel_result_compare_screen.dart';
 import 'duel_summary_screen.dart';
 
@@ -265,48 +266,54 @@ class _RoundDoneView extends StatelessWidget {
     final theme = Theme.of(context);
     final result = controller.buildResult();
     final justFinished = result.roundsMs.last;
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text('🎯', style: TextStyle(fontSize: 56)),
-          const SizedBox(height: 12),
-          Text(
-            'Runde ${controller.roundIndex + 1} geschafft!',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            _formatMs(justFinished),
-            style: theme.textTheme.displaySmall?.copyWith(
-              fontFeatures: const [FontFeature.tabularFigures()],
-              color: theme.colorScheme.primary,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          if (result.penaltiesMs.last > 0) ...[
-            const SizedBox(height: 4),
+    return TabletConstrained(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const Text('🎯', style: TextStyle(fontSize: 56)),
+            const SizedBox(height: 12),
             Text(
-              'davon ${_formatMs(result.penaltiesMs.last)} Strafzeit',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.error,
+              'Runde ${controller.roundIndex + 1} geschafft!',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _formatMs(justFinished),
+              textAlign: TextAlign.center,
+              style: theme.textTheme.displaySmall?.copyWith(
+                fontFeatures: const [FontFeature.tabularFigures()],
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            if (result.penaltiesMs.last > 0) ...[
+              const SizedBox(height: 4),
+              Text(
+                'davon ${_formatMs(result.penaltiesMs.last)} Strafzeit',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            ],
+            const SizedBox(height: 32),
+            FilledButton.icon(
+              onPressed: onContinue,
+              icon: const Icon(Icons.play_arrow),
+              label: const Text('Weiter zur nächsten Runde'),
+              style: FilledButton.styleFrom(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
               ),
             ),
           ],
-          const SizedBox(height: 32),
-          FilledButton.icon(
-            onPressed: onContinue,
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Weiter zur nächsten Runde'),
-            style: FilledButton.styleFrom(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

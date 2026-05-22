@@ -194,8 +194,12 @@ final authServiceProvider = Provider<AuthService>((ref) {
   return AuthService(ref.watch(firebaseAuthProvider));
 });
 
+/// Auth-State des aktuellen Users. Nutzt `userChanges` (nicht
+/// `authStateChanges`), damit Updates an `emailVerified`/`displayName` —
+/// z. B. nach `reload()` oder externer Email-Bestätigung — auch beim
+/// Listener ankommen.
 final authStateProvider = StreamProvider<User?>((ref) {
-  return ref.watch(firebaseAuthProvider).authStateChanges();
+  return ref.watch(firebaseAuthProvider).userChanges();
 });
 
 final sessionDetailProvider = FutureProvider.autoDispose

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/providers.dart';
+import '../../../shared/widgets/tablet_constrained.dart';
 import '../duel_providers.dart';
 import '../models/duel.dart';
 
@@ -99,7 +100,8 @@ class _CompletedView extends StatelessWidget {
     final outcomeText = iWon ? 'Gewonnen!' : 'Verloren';
     final outcomeColor = iWon ? scheme.tertiary : scheme.error;
 
-    return Padding(
+    return TabletConstrained(
+      child: Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -141,7 +143,7 @@ class _CompletedView extends StatelessWidget {
             result: opponent,
             format: _formatMs,
           ),
-          const Spacer(),
+          const SizedBox(height: 24),
           FilledButton.icon(
             onPressed: () =>
                 Navigator.of(context).popUntil((r) => r.isFirst),
@@ -152,6 +154,7 @@ class _CompletedView extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

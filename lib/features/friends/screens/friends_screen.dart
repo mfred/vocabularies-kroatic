@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/providers.dart';
+import '../../../shared/widgets/tablet_constrained.dart';
 import '../friends_providers.dart';
 import '../models/friend_request.dart';
 import '../models/user_profile.dart';
@@ -88,7 +89,7 @@ class _FriendsListTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final asyncFriends = ref.watch(friendsListProvider);
-    return asyncFriends.when(
+    return TabletConstrained(child: asyncFriends.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => _ErrorBox(error: e),
       data: (friends) {
@@ -121,7 +122,7 @@ class _FriendsListTab extends ConsumerWidget {
           itemCount: friends.length,
         );
       },
-    );
+    ));
   }
 }
 
@@ -173,7 +174,7 @@ class _RequestsTab extends ConsumerWidget {
     final incoming = ref.watch(incomingFriendRequestsProvider);
     final outgoing = ref.watch(outgoingFriendRequestsProvider);
 
-    return ListView(
+    return TabletConstrained(child: ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
       children: [
         Text(
@@ -233,7 +234,7 @@ class _RequestsTab extends ConsumerWidget {
           },
         ),
       ],
-    );
+    ));
   }
 }
 

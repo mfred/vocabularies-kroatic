@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/providers.dart';
 import '../services/auth_service.dart';
+import 'verify_email_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -204,13 +205,20 @@ class _SignUpFormState extends ConsumerState<_SignUpForm> {
       _error = null;
     });
     try {
-      await ref.read(authServiceProvider).signUpWithEmail(
+      final user = await ref.read(authServiceProvider).signUpWithEmail(
             email: _email.text,
             password: _password.text,
             displayName: _nickname.text,
           );
       if (!mounted) return;
-      Navigator.of(context).pop();
+      // Statt direkt zurück: zum Verify-Screen leiten — das ist gesetzlich
+      // erforderlich (Double-Opt-In) und sorgt dafür, dass der User die
+      // Bestätigungs-Mail wahrnimmt.
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => VerifyEmailScreen(email: user.email ?? _email.text.trim()),
+        ),
+      );
     } on FirebaseAuthException catch (e) {
       setState(() => _error = authErrorMessage(e));
     } catch (e) {

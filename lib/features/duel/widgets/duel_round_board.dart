@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../shared/widgets/tablet_constrained.dart';
 import '../controllers/duel_play_controller.dart';
 import '../models/duel_pair.dart';
 
@@ -28,7 +29,9 @@ class DuelRoundBoard extends StatelessWidget {
     final right = round.rightPairs;
     final slotCount = left.length;
 
-    return Padding(
+    return TabletConstrained(
+      maxWidth: kTabletMaxBoardWidth,
+      child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Column(
         children: [
@@ -66,6 +69,7 @@ class DuelRoundBoard extends StatelessWidget {
             if (i < slotCount - 1) const SizedBox(height: 10),
           ],
         ],
+      ),
       ),
     );
   }
@@ -247,7 +251,7 @@ class _DuelSlotCardState extends State<_DuelSlotCard>
       feedback: Material(
         color: Colors.transparent,
         child: SizedBox(
-          width: MediaQuery.of(context).size.width * 0.42,
+          width: math.min(MediaQuery.of(context).size.width * 0.42, 320),
           child: _WordCard(
             text: widget.text,
             backgroundColor: theme.colorScheme.primary,

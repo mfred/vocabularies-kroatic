@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../friends_providers.dart';
 import '../models/user_profile.dart';
 
-/// Drei Such-Modi: Email, Anzeigename (Prefix), 6-stelliger Freund-Code.
+/// Zwei Such-Modi: Email und Anzeigename (Prefix).
 class UserSearchScreen extends ConsumerStatefulWidget {
   const UserSearchScreen({super.key});
 
@@ -13,7 +13,7 @@ class UserSearchScreen extends ConsumerStatefulWidget {
 }
 
 class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
-  UserSearchKind _kind = UserSearchKind.code;
+  UserSearchKind _kind = UserSearchKind.name;
   final _controller = TextEditingController();
   String _query = '';
 
@@ -29,18 +29,6 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
         return 'beispiel@mail.com';
       case UserSearchKind.name:
         return 'mind. 3 Zeichen';
-      case UserSearchKind.code:
-        return 'Freund-Code (6 Zeichen, z. B. AB3K9X)';
-    }
-  }
-
-  String? get _helper {
-    switch (_kind) {
-      case UserSearchKind.code:
-        return 'Frag deinen Freund nach seinem Freund-Code — er steht oben in seinem Such-Dialog.';
-      case UserSearchKind.email:
-      case UserSearchKind.name:
-        return null;
     }
   }
 
@@ -50,8 +38,6 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
         return Icons.alternate_email;
       case UserSearchKind.name:
         return Icons.person_search_outlined;
-      case UserSearchKind.code:
-        return Icons.tag;
     }
   }
 
@@ -73,11 +59,6 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
               const SizedBox(height: 12),
               SegmentedButton<UserSearchKind>(
                 segments: const [
-                  ButtonSegment(
-                    value: UserSearchKind.code,
-                    label: Text('Code'),
-                    icon: Icon(Icons.tag),
-                  ),
                   ButtonSegment(
                     value: UserSearchKind.name,
                     label: Text('Name'),
@@ -103,13 +84,9 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
                 controller: _controller,
                 onChanged: (v) => setState(() => _query = v),
                 textInputAction: TextInputAction.search,
-                textCapitalization: _kind == UserSearchKind.code
-                    ? TextCapitalization.characters
-                    : TextCapitalization.none,
+                textCapitalization: TextCapitalization.none,
                 decoration: InputDecoration(
                   hintText: _hint,
-                  helperText: _helper,
-                  helperMaxLines: 3,
                   prefixIcon: Icon(_icon),
                   border: const OutlineInputBorder(),
                 ),
@@ -141,21 +118,12 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
         return q.contains('@') && q.length > 3;
       case UserSearchKind.name:
         return q.length >= 3;
-      case UserSearchKind.code:
-        return q.length == 6;
     }
   }
 
   String _normalizedQuery() {
-    final q = _query.trim();
-    switch (_kind) {
-      case UserSearchKind.email:
-        return q.toLowerCase();
-      case UserSearchKind.name:
-        return q.toLowerCase();
-      case UserSearchKind.code:
-        return q.toUpperCase();
-    }
+    final q = _query.trim().toLowerCase();
+    return q;
   }
 }
 

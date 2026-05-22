@@ -14,10 +14,13 @@ final friendServiceProvider = Provider<FriendService>((ref) {
   return FriendService(ref.watch(firestoreProvider));
 });
 
-/// Stream auf das eigene Profil. Null wenn nicht eingeloggt.
+/// Stream auf das eigene Profil. Null wenn nicht eingeloggt **oder** wenn
+/// die Email noch nicht bestätigt ist (Double-Opt-In-Gate). Unverifizierte
+/// Accounts haben kein Firestore-Profil und können dadurch nicht in der
+/// Friend-Suche auftauchen oder Duelle starten.
 final myUserProfileProvider = StreamProvider<UserProfile?>((ref) {
   final auth = ref.watch(authStateProvider).value;
-  if (auth == null) return Stream.value(null);
+  if (auth == null || !auth.emailVerified) return Stream.value(null);
   return ref.watch(userProfileServiceProvider).watch(auth.uid);
 });
 
@@ -37,12 +40,18 @@ final outgoingFriendRequestsProvider =
 
 /// Eigene Freunde — als `UserProfile`-Liste, durch Auflösung der UIDs aus
 /// `friendships`. Ändert sich live, wenn neue Freundschaften dazukommen.
+///
+/// Kein vorgezogenes `yield []`, weil das den UI-State zwischen "leer" und
+/// "loading" flackern lässt, solange Firestore noch Verbindungsversuche
+/// macht. Stream-Errors (z. B. Permission-Denied) kommen jetzt direkt als
+/// AsyncError im UI an, statt unter einer fake-leeren Liste verborgen zu
+/// bleiben.
 final friendsListProvider = StreamProvider<List<UserProfile>>((ref) async* {
-  // Sofort eine leere Liste yielden — verhindert den ewigen Loading-State,
-  // wenn der Firestore-Stream langsam (oder gar nicht) antwortet.
-  yield const [];
   final auth = ref.watch(authStateProvider).value;
-  if (auth == null) return;
+  if (auth == null) {
+    yield const [];
+    return;
+  }
   final service = ref.watch(friendServiceProvider);
   final profileService = ref.watch(userProfileServiceProvider);
   await for (final uids in service.watchFriendUids(auth.uid)) {
@@ -57,7 +66,7 @@ final friendsListProvider = StreamProvider<List<UserProfile>>((ref) async* {
   }
 });
 
-enum UserSearchKind { email, name, code }
+enum UserSearchKind { email, name }
 
 /// Verwende [searchUsersProvider] über ein typisiertes Args-Objekt.
 final searchUsersProvider = FutureProvider.autoDispose
@@ -69,18 +78,17 @@ final searchUsersProvider = FutureProvider.autoDispose
       return svc.searchByEmail(args.query);
     case UserSearchKind.name:
       return svc.searchByNamePrefix(args.query);
-    case UserSearchKind.code:
-      final p = await svc.searchByFriendCode(args.query);
-      return p == null ? const [] : [p];
   }
 });
 
 /// Side-effect-Provider: sorgt dafür, dass `users/{uid}` bei jedem Login
 /// existiert (idempotent). Wird in [app.dart] über `ref.listen` ausgelöst.
+/// **Wichtig**: legt das Profil nur an, wenn die Email bestätigt ist
+/// (Double-Opt-In-Anforderung).
 final ensureProfileOnLoginProvider = Provider<void>((ref) {
   ref.listen(authStateProvider, (prev, next) async {
     final user = next.value;
-    if (user == null) return;
+    if (user == null || !user.emailVerified) return;
     try {
       await ref.read(userProfileServiceProvider).ensureProfile(user);
     } catch (_) {

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/firebase_status.dart';
 import '../../../shared/providers.dart';
+import '../../../shared/widgets/tablet_constrained.dart';
 import '../../auth/screens/login_screen.dart';
 import '../models/leaderboard_filter.dart';
 import '../models/leaderboard_range.dart';
@@ -115,7 +116,7 @@ class _LeaderboardTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(leaderboardProvider(filter));
-    return async.when(
+    return TabletConstrained(child: async.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(
         child: Padding(
@@ -170,6 +171,6 @@ class _LeaderboardTab extends ConsumerWidget {
           ),
         );
       },
-    );
+    ));
   }
 }

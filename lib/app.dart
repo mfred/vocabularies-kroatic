@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/database/database.dart' hide StreakReward;
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/profile_screen.dart';
+import 'features/auth/screens/verify_email_screen.dart';
 import 'features/duel/duel_providers.dart';
 import 'features/friends/friends_providers.dart';
 import 'features/friends/screens/friends_screen.dart';
@@ -507,8 +508,15 @@ class _AppDrawer extends ConsumerWidget {
                 );
               },
             ),
-            if (firebaseReady && authUser != null)
+            if (firebaseReady && authUser != null && authUser.emailVerified)
               _FriendsDrawerEntry()
+            else if (firebaseReady && authUser != null && !authUser.emailVerified)
+              ListTile(
+                enabled: false,
+                leading: const Icon(Icons.group_outlined),
+                title: const Text('Freunde'),
+                subtitle: const Text('Bitte zuerst Email bestätigen'),
+              )
             else if (firebaseReady)
               ListTile(
                 enabled: false,
@@ -520,11 +528,15 @@ class _AppDrawer extends ConsumerWidget {
               ListTile(
                 leading: Icon(authUser == null
                     ? Icons.login
-                    : Icons.account_circle_outlined),
+                    : (authUser.emailVerified
+                        ? Icons.account_circle_outlined
+                        : Icons.mark_email_unread_outlined)),
                 title: Text(
                   authUser == null
                       ? 'Anmelden / Registrieren'
-                      : 'Mein Profil',
+                      : (authUser.emailVerified
+                          ? 'Mein Profil'
+                          : 'Email bestätigen'),
                 ),
                 subtitle: authUser?.email != null
                     ? Text(
@@ -537,9 +549,14 @@ class _AppDrawer extends ConsumerWidget {
                   Navigator.of(context).pop();
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => authUser == null
-                          ? const LoginScreen()
-                          : const ProfileScreen(),
+                      builder: (_) {
+                        if (authUser == null) return const LoginScreen();
+                        if (!authUser.emailVerified) {
+                          return VerifyEmailScreen(
+                              email: authUser.email ?? '');
+                        }
+                        return const ProfileScreen();
+                      },
                     ),
                   );
                 },

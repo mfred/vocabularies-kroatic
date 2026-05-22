@@ -6,6 +6,7 @@ import '../../friends/models/user_profile.dart';
 import '../../quiz/models/quiz_direction.dart';
 import '../../../shared/firebase_status.dart';
 import '../../../shared/providers.dart';
+import '../../../shared/widgets/tablet_constrained.dart';
 import '../duel_providers.dart';
 import '../models/duel_pair.dart';
 import '../models/duel_run_result.dart';
@@ -155,11 +156,12 @@ class _DuelSummaryScreenState extends ConsumerState<DuelSummaryScreen> {
         ),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+        child: TabletConstrained(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
               const SizedBox(height: 8),
               const Center(
                 child: Text('🏁', style: TextStyle(fontSize: 56)),
@@ -218,7 +220,7 @@ class _DuelSummaryScreenState extends ConsumerState<DuelSummaryScreen> {
                   ],
                 ),
               ),
-              const Spacer(),
+              const SizedBox(height: 32),
               FilledButton.icon(
                 onPressed: _sending || !canChallenge ? null : _challengeFriend,
                 icon: _sending
@@ -244,7 +246,8 @@ class _DuelSummaryScreenState extends ConsumerState<DuelSummaryScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
               ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
