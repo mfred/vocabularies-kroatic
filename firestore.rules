@@ -53,7 +53,18 @@ service cloud.firestore {
 
     // Freundschaften — eine Zeile pro Paar, ID = "<uidA>_<uidB>" sortiert.
     match /friendships/{pairKey} {
-      allow read: if request.auth != null
+      // `get` muss bei nicht-existenten Pair-Docs sauber `exists=false`
+      // zurückliefern können — dafür wird die Rule null-tolerant gemacht.
+      // Sonst wirft Firestore bei z. B. `areFriends(...)` permission-denied,
+      // wenn das Pair noch nie existierte (resource.data.uids ist undefined).
+      allow get: if request.auth != null
+        && (
+          !exists(/databases/$(database)/documents/friendships/$(pairKey))
+          || request.auth.uid in resource.data.uids
+        );
+      // `list` (Collection-Queries) bleibt strikt — nur Mitglieder dürfen
+      // enumerieren (in der App via watchFriendUids mit arrayContains).
+      allow list: if request.auth != null
         && request.auth.uid in resource.data.uids;
       // Beide Beteiligten dürfen anlegen (im Batch beim Accept). Wir prüfen
       // hier nur, dass der Schreibende selbst in `uids` steht.

@@ -95,10 +95,6 @@ const Color _kWrongBg = Color(0xFFFDECEA);
 const Color _kWrongBorder = Color(0xFFC62828);
 const Color _kWrongText = Color(0xFFB71C1C);
 
-// Hover-Töne, wenn eine Draggable beim Drüberziehen die falsche Karte trifft.
-const Color _kHoverWrongBg = Color(0xFFFFE7E5);
-const Color _kHoverWrongBorder = Color(0xFFE57373);
-
 // Sichtbarkeitsfenster der grünen "matched"-Karte, bevor sie ausfaded.
 const Duration _kMatchedHold = Duration(milliseconds: 600);
 const Duration _kMatchedFade = Duration(milliseconds: 400);
@@ -132,8 +128,10 @@ class _DuelSlotCardState extends State<_DuelSlotCard>
     with SingleTickerProviderStateMixin {
   late final AnimationController _shakeCtrl;
   bool _wrongFlash = false;
-  bool _hoverCorrect = false;
-  bool _hoverWrong = false;
+  // Generischer Hover-Indikator beim Drüberziehen — verrät NICHT, ob die
+  // Ziel-Karte richtig oder falsch wäre. Diese Information wird erst nach
+  // dem Drop sichtbar (grüner Fade oder roter Blink+Shake).
+  bool _hovering = false;
 
   @override
   void initState() {
@@ -174,14 +172,10 @@ class _DuelSlotCardState extends State<_DuelSlotCard>
       border = _kWrongBorder;
       textColor = _kWrongText;
       borderWidth = 2.0;
-    } else if (_hoverCorrect) {
-      bg = _kMatchedBg;
-      border = _kMatchedBorder;
-      textColor = _kMatchedText;
-      borderWidth = 2.0;
-    } else if (_hoverWrong) {
-      bg = _kHoverWrongBg;
-      border = _kHoverWrongBorder;
+    } else if (_hovering) {
+      // Neutraler "Drop hier möglich"-Indikator, ohne Hinweis ob richtig/falsch.
+      bg = theme.colorScheme.primaryContainer.withValues(alpha: 0.3);
+      border = theme.colorScheme.primary;
       textColor = theme.colorScheme.onSurface;
       borderWidth = 2.0;
     } else {
@@ -200,27 +194,19 @@ class _DuelSlotCardState extends State<_DuelSlotCard>
 
     final dragTarget = DragTarget<_DragPayload>(
       onWillAcceptWithDetails: (details) {
+        // Nur cross-side Drops erlauben (keine links→links / rechts→rechts).
+        // Kein Match-Check hier — der Hover-Highlight bleibt neutral.
         if (details.data.side == widget.side) return false;
-        final isMatch = details.data.itemId == widget.pair.itemId;
-        setState(() {
-          _hoverCorrect = isMatch;
-          _hoverWrong = !isMatch;
-        });
+        setState(() => _hovering = true);
         return true;
       },
       onLeave: (_) {
         if (!mounted) return;
-        setState(() {
-          _hoverCorrect = false;
-          _hoverWrong = false;
-        });
+        setState(() => _hovering = false);
       },
       onAcceptWithDetails: (details) {
         final isMatch = details.data.itemId == widget.pair.itemId;
-        setState(() {
-          _hoverCorrect = false;
-          _hoverWrong = false;
-        });
+        setState(() => _hovering = false);
         if (isMatch) {
           widget.onMatched();
         } else {

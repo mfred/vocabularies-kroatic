@@ -24,17 +24,33 @@ class FriendService {
     if (fromUid == toUid) {
       throw StateError('Du kannst dir selbst keine Anfrage senden.');
     }
-    if (await areFriends(fromUid, toUid)) {
-      throw StateError('Ihr seid bereits befreundet.');
+    // Vorab-Checks dürfen den eigentlichen `add` nicht blockieren, wenn sie
+    // wegen Firestore-Rules permission-denied liefern. Sie sind nur UX-Hinweise.
+    try {
+      if (await areFriends(fromUid, toUid)) {
+        throw StateError('Ihr seid bereits befreundet.');
+      }
+    } on StateError {
+      rethrow;
+    } catch (_) {
+      // Permission-Error o.ä. beim Existenz-Check ignorieren.
     }
-    final existing = await _requests
-        .where('fromUid', isEqualTo: fromUid)
-        .where('toUid', isEqualTo: toUid)
-        .where('status', isEqualTo: statusToString(FriendRequestStatus.pending))
-        .limit(1)
-        .get();
-    if (existing.docs.isNotEmpty) {
-      throw StateError('Du hast bereits eine offene Anfrage gesendet.');
+    try {
+      final existing = await _requests
+          .where('fromUid', isEqualTo: fromUid)
+          .where('toUid', isEqualTo: toUid)
+          .where('status',
+              isEqualTo: statusToString(FriendRequestStatus.pending))
+          .limit(1)
+          .get();
+      if (existing.docs.isNotEmpty) {
+        throw StateError('Du hast bereits eine offene Anfrage gesendet.');
+      }
+    } on StateError {
+      rethrow;
+    } catch (_) {
+      // Permission-Error o.ä. ignorieren — der `add` unten wird ggf. den
+      // ehrlichen Fehler zurückliefern.
     }
     await _requests.add({
       'fromUid': fromUid,
@@ -47,8 +63,15 @@ class FriendService {
 
   Future<bool> areFriends(String a, String b) async {
     final key = friendshipPairKey(a, b);
-    final snap = await _friendships.doc(key).get();
-    return snap.exists;
+    try {
+      final snap = await _friendships.doc(key).get();
+      return snap.exists;
+    } catch (_) {
+      // Permission-Denied bei nicht-existentem Doc (Rule scheitert weil
+      // resource.data.uids undefined ist) wird hier abgefangen. Wir nehmen
+      // "nicht befreundet" an — falsche Annahme wird beim Add weitergereicht.
+      return false;
+    }
   }
 
   Stream<List<FriendRequest>> watchIncoming(String uid) {

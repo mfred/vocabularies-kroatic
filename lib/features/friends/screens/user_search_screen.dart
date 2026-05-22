@@ -309,12 +309,6 @@ class _ResultTileState extends ConsumerState<_ResultTile> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                Text(
-                  '#${widget.profile.friendCode}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
                 if (_info != null)
                   Text(
                     _info!,
