@@ -9,12 +9,18 @@ class LeaderboardRow extends StatefulWidget {
     required this.entry,
     this.isFriend = false,
     this.isSelf = false,
+    this.avatarStyle,
     this.onSendRequest,
   });
 
   final LeaderboardEntry entry;
   final bool isFriend;
   final bool isSelf;
+
+  /// DiceBear-Style des Eintrags. Wenn `null`, fällt das Widget auf den
+  /// App-Default zurück (`kDefaultAvatarStyle`). Wird vom `_LeaderboardTab`
+  /// aus einem Bulk-Profil-Lookup gespeist.
+  final String? avatarStyle;
 
   /// Wenn gesetzt: rechts wird ein kleiner Plus-Button gerendert, der bei
   /// Tap die Freundschaftsanfrage absendet. `null` bedeutet: kein Button —
@@ -100,6 +106,7 @@ class _LeaderboardRowState extends State<LeaderboardRow> {
               const SizedBox(width: 6),
               UserAvatar(
                 seed: entry.uid,
+                style: widget.avatarStyle ?? kDefaultAvatarStyle,
                 fallbackText: entry.displayName,
                 size: 32,
               ),

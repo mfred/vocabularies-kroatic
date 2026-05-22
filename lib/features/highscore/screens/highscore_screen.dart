@@ -6,6 +6,7 @@ import '../../../shared/providers.dart';
 import '../../../shared/widgets/tablet_constrained.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../friends/friends_providers.dart';
+import '../../friends/models/user_profile.dart';
 import '../models/leaderboard_filter.dart';
 import '../models/leaderboard_range.dart';
 import '../widgets/leaderboard_row.dart';
@@ -163,6 +164,15 @@ class _LeaderboardTab extends ConsumerWidget {
         final auth = ref.watch(authStateProvider).value;
         final selfUid = auth?.uid;
         final canSendRequests = auth != null && auth.emailVerified;
+        // Bulk-Lookup der Profile, um pro Eintrag den individuellen
+        // Avatar-Style zu kennen. Family-Key ist sortierte komma-getrennte
+        // UID-Liste — gleiche Mengen = gleicher Provider-Zustand.
+        final uidsForLookup =
+            (entries.map((e) => e.uid).toList()..sort()).join(',');
+        final profileMap = ref
+                .watch(profilesByUidsProvider(uidsForLookup))
+                .value ??
+            const <String, UserProfile>{};
         return RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(leaderboardProvider(filter));
@@ -181,6 +191,7 @@ class _LeaderboardTab extends ConsumerWidget {
                 entry: e,
                 isSelf: isSelf,
                 isFriend: isFriend,
+                avatarStyle: profileMap[e.uid]?.avatarStyle,
                 onSendRequest: !showAddButton
                     ? null
                     : () async {

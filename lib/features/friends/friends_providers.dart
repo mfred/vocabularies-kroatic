@@ -70,6 +70,25 @@ final friendsListProvider = StreamProvider<List<UserProfile>>((ref) async* {
 
 enum UserSearchKind { email, name }
 
+/// Bulk-Lookup für mehrere `users/{uid}`-Profile auf einmal. Wird z. B. von
+/// der Bestenliste verwendet, um pro Eintrag den individuellen `avatarStyle`
+/// zu rendern, ohne N Einzel-Reads zu machen.
+///
+/// Family-Key ist die sortiert/komma-getrennte UID-Liste — Riverpod-Cache-
+/// freundlich (gleiche Menge ⇒ gleicher Key ⇒ gleicher Provider-Zustand).
+final profilesByUidsProvider = FutureProvider.autoDispose
+    .family<Map<String, UserProfile>, String>((ref, uidsCsv) async {
+  final uids = uidsCsv.split(',').where((s) => s.isNotEmpty).toList();
+  if (uids.isEmpty) return const <String, UserProfile>{};
+  final svc = ref.watch(userProfileServiceProvider);
+  try {
+    final profiles = await svc.getManyByUids(uids);
+    return {for (final p in profiles) p.uid: p};
+  } catch (_) {
+    return const <String, UserProfile>{};
+  }
+});
+
 /// Verwende [searchUsersProvider] über ein typisiertes Args-Objekt.
 ///
 /// Beide Such-Pfade haben einen 8-Sekunden-Timeout — verhindert, dass der
