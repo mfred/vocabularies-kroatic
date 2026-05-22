@@ -38,11 +38,11 @@ final outgoingFriendRequestsProvider =
 /// Eigene Freunde — als `UserProfile`-Liste, durch Auflösung der UIDs aus
 /// `friendships`. Ändert sich live, wenn neue Freundschaften dazukommen.
 final friendsListProvider = StreamProvider<List<UserProfile>>((ref) async* {
+  // Sofort eine leere Liste yielden — verhindert den ewigen Loading-State,
+  // wenn der Firestore-Stream langsam (oder gar nicht) antwortet.
+  yield const [];
   final auth = ref.watch(authStateProvider).value;
-  if (auth == null) {
-    yield const [];
-    return;
-  }
+  if (auth == null) return;
   final service = ref.watch(friendServiceProvider);
   final profileService = ref.watch(userProfileServiceProvider);
   await for (final uids in service.watchFriendUids(auth.uid)) {
@@ -51,7 +51,8 @@ final friendsListProvider = StreamProvider<List<UserProfile>>((ref) async* {
       continue;
     }
     final profiles = await profileService.getManyByUids(uids);
-    profiles.sort((a, b) => a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()));
+    profiles.sort((a, b) =>
+        a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()));
     yield profiles;
   }
 });

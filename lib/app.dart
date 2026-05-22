@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/database/database.dart' hide StreakReward;
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/profile_screen.dart';
-import 'features/duel/screens/duel_home_screen.dart';
+import 'features/duel/duel_providers.dart';
 import 'features/friends/friends_providers.dart';
 import 'features/friends/screens/friends_screen.dart';
 import 'features/highscore/screens/highscore_screen.dart';
@@ -189,7 +189,6 @@ class _LessonOverview extends ConsumerWidget {
             child:
                 _SyncBanner(syncResult: syncResult, totalItems: totalItems),
           ),
-          const SliverToBoxAdapter(child: _DuelEntryCard()),
           if (lessons.isEmpty)
             SliverFillRemaining(
               hasScrollBody: false,
@@ -365,73 +364,20 @@ class _SyncBannerState extends State<_SyncBanner> {
   }
 }
 
-class _DuelEntryCard extends StatelessWidget {
-  const _DuelEntryCard();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      child: Material(
-        color: scheme.primaryContainer,
-        borderRadius: BorderRadius.circular(16),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => const DuelHomeScreen(),
-              ),
-            );
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-            child: Row(
-              children: [
-                Icon(Icons.bolt, size: 36, color: scheme.onPrimaryContainer),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Duell',
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          color: scheme.onPrimaryContainer,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '3 Runden auf Zeit — schnelles Vokabel-Paaren',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: scheme.onPrimaryContainer,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(Icons.chevron_right, color: scheme.onPrimaryContainer),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TopicCard extends StatelessWidget {
+class _TopicCard extends ConsumerWidget {
   const _TopicCard({required this.lesson});
 
   final LessonsCacheData lesson;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final icon = _iconFor(lesson.lessonId);
+    final incomingCount = ref.watch(incomingPendingDuelsProvider).maybeWhen(
+          data: (duels) =>
+              duels.where((d) => d.lessonId == lesson.lessonId).length,
+          orElse: () => 0,
+        );
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 12),
@@ -466,6 +412,33 @@ class _TopicCard extends StatelessWidget {
                   ),
                 ),
               ),
+              if (incomingCount > 0)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.tertiary,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.bolt,
+                            size: 14, color: theme.colorScheme.onTertiary),
+                        const SizedBox(width: 2),
+                        Text(
+                          '$incomingCount',
+                          style: TextStyle(
+                            color: theme.colorScheme.onTertiary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               Icon(
                 Icons.chevron_right,
                 color: theme.colorScheme.outline,

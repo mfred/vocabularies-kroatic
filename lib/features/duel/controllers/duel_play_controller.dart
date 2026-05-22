@@ -5,7 +5,7 @@ import '../models/duel_run_result.dart';
 
 enum DuelPhase { idle, countdown, playing, roundDone, allDone }
 
-const int kDuelPenaltyMs = 200;
+const int kDuelPenaltyMs = 500;
 
 /// Lokaler Spielzustand für einen Duell-Lauf. Hält Stopwatch + Strafzeit pro
 /// laufender Runde und kumuliert Ergebnisse über alle Runden.

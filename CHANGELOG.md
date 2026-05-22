@@ -7,6 +7,47 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Changed — Iteration 25 (Duell pro Kategorie, Countdown blickdicht, Freunde-UX)
+- **Duell vom Top-Level entfernt**: keine eigene Karte mehr auf dem Home
+  und kein `DuelHomeScreen`-Hub. Stattdessen ist „Duell" jetzt die vierte
+  Aktion in jedem `LessonMenuScreen` (parallel zu Quiz / Vokabeln lernen /
+  Fehler ausbessern), deaktiviert bei < 12 Vokabeln.
+- **Eingehende Herausforderungen pro Lektion**: kleine Pille (⚡+Anzahl)
+  auf jeder `_TopicCard` im Home zeigt, in welcher Kategorie etwas
+  wartet. Im `LessonMenuScreen` werden die Duelle dieser Lektion in
+  einer eigenen Sektion oben angezeigt und können dort angenommen
+  werden. `IncomingDuelTile` als wiederverwendbares Widget extrahiert.
+- **Duell-Start zentralisiert** in `duel_launcher.dart`
+  (`startDuelForLesson`), nutzt weiter `DuelSetBuilder` + globale
+  `preferredDirectionProvider`.
+- **Countdown-Overlay blickdicht**: war vorher
+  `Colors.black.withValues(alpha: 0.55)` — Vokabel-Karten haben durch
+  den halbtransparenten Layer durchgeschimmert. Jetzt
+  `theme.colorScheme.surface` (alpha 1.0), passt zum App-Theme.
+
+### Fixed — Iteration 25 (Freundesliste)
+- **`friendsListProvider`** yieldet sofort `[]`, statt im Loading-State
+  zu hängen, falls der Firestore-Stream verzögert antwortet (etwa
+  während die Auth-Session noch initialisiert wird).
+- **Permission-Denied-Fehler im `FriendsScreen`** wird jetzt mit
+  klarer Erklärung („Firestore-Regeln werden gerade aktualisiert")
+  statt mit roher Exception angezeigt. **Root-Cause-Fix** liegt
+  außerhalb des Codes: `firebase deploy --only firestore:rules,firestore:indexes`
+  nach dem Push ausführen — die Rule für `friendships` existiert lokal
+  (Iteration 23), war aber serverseitig nicht aktiv.
+
+### Changed — Iteration 25 (Freund-Code UI)
+- `user_search_screen.dart`: Hint im Code-Modus präziser
+  („Freund-Code (6 Zeichen, z. B. AB3K9X)"), `helperText` erklärt
+  Herkunft des Codes. Eigener Code-Banner sagt jetzt: „gib ihn deinem
+  Freund weiter".
+
+### Changed — Iteration 25 (Duell-Strafzeit)
+- `kDuelPenaltyMs` von 200 ms → 500 ms — falsche Zuordnung kostet
+  jetzt deutlich mehr Zeit. Snippet in der `_IntroBox` wurde mit dem
+  alten `DuelHomeScreen` ohnehin entfernt; falls der Hinweis irgendwo
+  in der App wieder auftaucht, dort von „0,2 s" auf „0,5 s" anpassen.
+
 ### Changed — Iteration 21 (Score-Skala x20 + Streak-Geschenk + Reset)
 - **`computeScore` skaliert um Faktor 20**: Treffer × 100 → × 5,
   Zeitbonus max 600 → 30 (halbiert sich alle 20 s). Maximum pro Quiz

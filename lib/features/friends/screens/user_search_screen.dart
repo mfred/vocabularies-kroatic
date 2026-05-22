@@ -30,7 +30,17 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
       case UserSearchKind.name:
         return 'mind. 3 Zeichen';
       case UserSearchKind.code:
-        return '6-stelliger Code';
+        return 'Freund-Code (6 Zeichen, z. B. AB3K9X)';
+    }
+  }
+
+  String? get _helper {
+    switch (_kind) {
+      case UserSearchKind.code:
+        return 'Frag deinen Freund nach seinem Freund-Code — er steht oben in seinem Such-Dialog.';
+      case UserSearchKind.email:
+      case UserSearchKind.name:
+        return null;
     }
   }
 
@@ -98,6 +108,8 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
                     : TextCapitalization.none,
                 decoration: InputDecoration(
                   hintText: _hint,
+                  helperText: _helper,
+                  helperMaxLines: 3,
                   prefixIcon: Icon(_icon),
                   border: const OutlineInputBorder(),
                 ),
@@ -170,7 +182,7 @@ class _MyCodeBanner extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Dein Freund-Code',
+                Text('Dein Freund-Code — gib ihn deinem Freund weiter',
                     style: theme.textTheme.labelMedium?.copyWith(
                       color: scheme.onPrimaryContainer,
                     )),

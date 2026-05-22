@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -89,7 +90,7 @@ class _FriendsListTab extends ConsumerWidget {
     final asyncFriends = ref.watch(friendsListProvider);
     return asyncFriends.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Fehler: $e')),
+      error: (e, _) => _ErrorBox(error: e),
       data: (friends) {
         if (friends.isEmpty) {
           return Center(
@@ -292,6 +293,54 @@ class _OutgoingRow extends ConsumerWidget {
           );
         }
       },
+    );
+  }
+}
+
+class _ErrorBox extends StatelessWidget {
+  const _ErrorBox({required this.error});
+
+  final Object error;
+
+  bool get _isPermissionDenied {
+    final e = error;
+    if (e is FirebaseException) {
+      return e.code == 'permission-denied';
+    }
+    return e.toString().contains('permission-denied');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final headline = _isPermissionDenied
+        ? 'Freundesliste vorübergehend nicht erreichbar'
+        : 'Fehler beim Laden';
+    final detail = _isPermissionDenied
+        ? 'Die Firestore-Regeln werden gerade aktualisiert. Probier es in einer Minute erneut.'
+        : error.toString();
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.cloud_off, size: 56, color: scheme.outline),
+            const SizedBox(height: 12),
+            Text(headline,
+                style: theme.textTheme.titleMedium, textAlign: TextAlign.center),
+            const SizedBox(height: 8),
+            Text(
+              detail,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

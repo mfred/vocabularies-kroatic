@@ -69,7 +69,7 @@ class _CountdownOverlayState extends State<CountdownOverlay> {
         ? theme.colorScheme.tertiary
         : theme.colorScheme.primary;
     return ColoredBox(
-      color: Colors.black.withValues(alpha: 0.55),
+      color: theme.colorScheme.surface,
       child: Center(
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 220),
