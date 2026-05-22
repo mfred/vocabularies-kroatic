@@ -1,16 +1,20 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../controllers/duel_play_controller.dart';
 import '../models/duel_pair.dart';
 
-/// Zwei-Spalten-Layout für eine Duell-Runde. Links Draggables (Prompt-Sprache),
-/// rechts DragTargets (Antwort-Sprache). Korrekter Drop = beide Karten werden
-/// als "matched" eingefärbt (gelocked); falscher Drop = +200 ms Strafe, Karte
-/// springt automatisch zurück (Standard-Verhalten von [Draggable.feedback]).
+/// Zwei-Spalten-Layout für eine Duell-Runde. Jede Karte ist gleichzeitig
+/// Draggable und DragTarget — d. h. man kann sowohl die deutsche auf die
+/// kroatische ziehen als auch umgekehrt. Drops sind nur zwischen den beiden
+/// Seiten erlaubt (links↔rechts), nicht innerhalb einer Seite.
 ///
-/// Pro Slot werden linke und rechte Karte über eine `IntrinsicHeight`-Row auf
-/// gleiche Höhe gezwungen, damit das Layout stabil bleibt, auch wenn ein Text
-/// umbricht.
+/// Korrekter Drop = grüner Fade auf beiden Karten (siehe `_FadingMatchedCard`).
+/// Falscher Drop = das fälschlich getroffene Target blinkt rot, wackelt kurz
+/// horizontal und löst eine kurze Geräte-Vibration aus; Strafzeit +200 ms
+/// wird via `registerIncorrectAttempt` registriert.
 class DuelRoundBoard extends StatelessWidget {
   const DuelRoundBoard({super.key, required this.controller});
 
@@ -34,19 +38,26 @@ class DuelRoundBoard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Expanded(
-                    child: _DraggableWordCard(
+                    child: _DuelSlotCard(
                       pair: left[i],
+                      side: _Side.left,
+                      text: left[i].leftText,
                       matched: matched.contains(left[i].itemId),
-                      onCanceled: controller.registerIncorrectAttempt,
+                      onMatched: () =>
+                          controller.registerCorrectMatch(left[i].itemId),
+                      onWrongDrop: controller.registerIncorrectAttempt,
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _DropTargetCard(
+                    child: _DuelSlotCard(
                       pair: right[i],
+                      side: _Side.right,
+                      text: right[i].rightText,
                       matched: matched.contains(right[i].itemId),
-                      onAccepted: () =>
+                      onMatched: () =>
                           controller.registerCorrectMatch(right[i].itemId),
+                      onWrongDrop: controller.registerIncorrectAttempt,
                     ),
                   ),
                 ],
@@ -60,6 +71,14 @@ class DuelRoundBoard extends StatelessWidget {
   }
 }
 
+enum _Side { left, right }
+
+class _DragPayload {
+  const _DragPayload(this.side, this.itemId);
+  final _Side side;
+  final String itemId;
+}
+
 // Hardcoded Grün-Töne für "matched" — bewusst Theme-unabhängig, weil das
 // ColorScheme aus dem blauen Seed (`0xFF1565C0`) eine rosa/rötliche Tertiary
 // generiert, was visuell wie "falsch" wirkt.
@@ -67,46 +86,170 @@ const Color _kMatchedBg = Color(0xFFDFF5E1);
 const Color _kMatchedBorder = Color(0xFF2E7D32);
 const Color _kMatchedText = Color(0xFF1B5E20);
 
+// Rot-Töne für falsches Drop-Feedback (kurzer Blink).
+const Color _kWrongBg = Color(0xFFFDECEA);
+const Color _kWrongBorder = Color(0xFFC62828);
+const Color _kWrongText = Color(0xFFB71C1C);
+
+// Hover-Töne, wenn eine Draggable beim Drüberziehen die falsche Karte trifft.
+const Color _kHoverWrongBg = Color(0xFFFFE7E5);
+const Color _kHoverWrongBorder = Color(0xFFE57373);
+
 // Sichtbarkeitsfenster der grünen "matched"-Karte, bevor sie ausfaded.
 const Duration _kMatchedHold = Duration(milliseconds: 600);
 const Duration _kMatchedFade = Duration(milliseconds: 400);
 
-class _DraggableWordCard extends StatefulWidget {
-  const _DraggableWordCard({
+// Shake- und Flash-Dauer für falsches Drop.
+const Duration _kShakeDuration = Duration(milliseconds: 350);
+const Duration _kWrongFlashDuration = Duration(milliseconds: 400);
+
+class _DuelSlotCard extends StatefulWidget {
+  const _DuelSlotCard({
     required this.pair,
+    required this.side,
+    required this.text,
     required this.matched,
-    required this.onCanceled,
+    required this.onMatched,
+    required this.onWrongDrop,
   });
 
   final DuelPair pair;
+  final _Side side;
+  final String text;
   final bool matched;
-  final VoidCallback onCanceled;
+  final VoidCallback onMatched;
+  final VoidCallback onWrongDrop;
 
   @override
-  State<_DraggableWordCard> createState() => _DraggableWordCardState();
+  State<_DuelSlotCard> createState() => _DuelSlotCardState();
 }
 
-class _DraggableWordCardState extends State<_DraggableWordCard> {
+class _DuelSlotCardState extends State<_DuelSlotCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _shakeCtrl;
+  bool _wrongFlash = false;
+  bool _hoverCorrect = false;
+  bool _hoverWrong = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _shakeCtrl = AnimationController(vsync: this, duration: _kShakeDuration);
+  }
+
+  @override
+  void dispose() {
+    _shakeCtrl.dispose();
+    super.dispose();
+  }
+
+  void _playWrong() {
+    HapticFeedback.heavyImpact();
+    if (!mounted) return;
+    setState(() => _wrongFlash = true);
+    _shakeCtrl.forward(from: 0);
+    Future.delayed(_kWrongFlashDuration, () {
+      if (!mounted) return;
+      setState(() => _wrongFlash = false);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     if (widget.matched) {
-      return _FadingMatchedCard(text: widget.pair.leftText);
+      return _FadingMatchedCard(text: widget.text);
     }
+
+    final Color bg;
+    final Color border;
+    final Color textColor;
+    double borderWidth = 1.5;
+    if (_wrongFlash) {
+      bg = _kWrongBg;
+      border = _kWrongBorder;
+      textColor = _kWrongText;
+      borderWidth = 2.0;
+    } else if (_hoverCorrect) {
+      bg = _kMatchedBg;
+      border = _kMatchedBorder;
+      textColor = _kMatchedText;
+      borderWidth = 2.0;
+    } else if (_hoverWrong) {
+      bg = _kHoverWrongBg;
+      border = _kHoverWrongBorder;
+      textColor = theme.colorScheme.onSurface;
+      borderWidth = 2.0;
+    } else {
+      bg = theme.colorScheme.surface;
+      border = theme.colorScheme.outline;
+      textColor = theme.colorScheme.onSurface;
+    }
+
     final card = _WordCard(
-      text: widget.pair.leftText,
-      backgroundColor: theme.colorScheme.surface,
-      borderColor: theme.colorScheme.outline,
-      textColor: theme.colorScheme.onSurface,
+      text: widget.text,
+      backgroundColor: bg,
+      borderColor: border,
+      textColor: textColor,
+      borderWidth: borderWidth,
     );
-    return Draggable<String>(
-      data: widget.pair.itemId,
+
+    final dragTarget = DragTarget<_DragPayload>(
+      onWillAcceptWithDetails: (details) {
+        if (details.data.side == widget.side) return false;
+        final isMatch = details.data.itemId == widget.pair.itemId;
+        setState(() {
+          _hoverCorrect = isMatch;
+          _hoverWrong = !isMatch;
+        });
+        return true;
+      },
+      onLeave: (_) {
+        if (!mounted) return;
+        setState(() {
+          _hoverCorrect = false;
+          _hoverWrong = false;
+        });
+      },
+      onAcceptWithDetails: (details) {
+        final isMatch = details.data.itemId == widget.pair.itemId;
+        setState(() {
+          _hoverCorrect = false;
+          _hoverWrong = false;
+        });
+        if (isMatch) {
+          widget.onMatched();
+        } else {
+          widget.onWrongDrop();
+          _playWrong();
+        }
+      },
+      builder: (context, candidate, rejected) {
+        return AnimatedBuilder(
+          animation: _shakeCtrl,
+          builder: (context, child) {
+            final t = _shakeCtrl.value;
+            final shakeX = t == 0
+                ? 0.0
+                : math.sin(t * math.pi * 4) * 8.0 * (1 - t);
+            return Transform.translate(
+              offset: Offset(shakeX, 0),
+              child: child,
+            );
+          },
+          child: card,
+        );
+      },
+    );
+
+    return Draggable<_DragPayload>(
+      data: _DragPayload(widget.side, widget.pair.itemId),
       feedback: Material(
         color: Colors.transparent,
         child: SizedBox(
           width: MediaQuery.of(context).size.width * 0.42,
           child: _WordCard(
-            text: widget.pair.leftText,
+            text: widget.text,
             backgroundColor: theme.colorScheme.primary,
             borderColor: theme.colorScheme.primary,
             textColor: theme.colorScheme.onPrimary,
@@ -115,63 +258,7 @@ class _DraggableWordCardState extends State<_DraggableWordCard> {
         ),
       ),
       childWhenDragging: Opacity(opacity: 0.35, child: card),
-      onDraggableCanceled: (_, _) => widget.onCanceled(),
-      child: card,
-    );
-  }
-}
-
-class _DropTargetCard extends StatefulWidget {
-  const _DropTargetCard({
-    required this.pair,
-    required this.matched,
-    required this.onAccepted,
-  });
-
-  final DuelPair pair;
-  final bool matched;
-  final VoidCallback onAccepted;
-
-  @override
-  State<_DropTargetCard> createState() => _DropTargetCardState();
-}
-
-class _DropTargetCardState extends State<_DropTargetCard> {
-  bool _hoverCorrect = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    if (widget.matched) {
-      return _FadingMatchedCard(text: widget.pair.rightText);
-    }
-    return DragTarget<String>(
-      onWillAcceptWithDetails: (details) {
-        final isMatch = details.data == widget.pair.itemId;
-        setState(() => _hoverCorrect = isMatch);
-        return isMatch;
-      },
-      onLeave: (_) => setState(() => _hoverCorrect = false),
-      onAcceptWithDetails: (_) {
-        setState(() => _hoverCorrect = false);
-        widget.onAccepted();
-      },
-      builder: (context, candidate, rejected) {
-        final highlight = _hoverCorrect;
-        return _WordCard(
-          text: widget.pair.rightText,
-          backgroundColor: highlight
-              ? theme.colorScheme.primaryContainer
-              : theme.colorScheme.surface,
-          borderColor: highlight
-              ? theme.colorScheme.primary
-              : theme.colorScheme.outline,
-          textColor: highlight
-              ? theme.colorScheme.onPrimaryContainer
-              : theme.colorScheme.onSurface,
-          borderWidth: highlight ? 2.0 : 1.5,
-        );
-      },
+      child: dragTarget,
     );
   }
 }
