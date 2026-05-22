@@ -1,6 +1,9 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
+import '../../../core/database/database.dart';
 import '../../quiz/models/quiz_direction.dart';
 import '../controllers/duel_play_controller.dart';
 import '../duel_providers.dart';
@@ -8,6 +11,7 @@ import '../models/duel_pair.dart';
 import '../widgets/countdown_overlay.dart';
 import '../widgets/duel_round_board.dart';
 import '../widgets/duel_round_timer_chip.dart';
+import '../../../shared/providers.dart';
 import '../../../shared/widgets/tablet_constrained.dart';
 import 'duel_result_compare_screen.dart';
 import 'duel_summary_screen.dart';
@@ -80,6 +84,11 @@ class _DuelPlayScreenState extends ConsumerState<DuelPlayScreen> {
     if (!mounted) return;
     final result = _controller.buildResult();
 
+    // Duell als finalisierte Session in `quizSessions` ablegen (mit
+    // mode='duel_local'), damit der Streak hochzählt. Best-effort —
+    // Fehler hier dürfen den Navigations-Flow nicht blockieren.
+    await _recordDuelInStreak(result);
+
     if (widget.isOpponentMode) {
       // In Firestore submitten und zum Vergleichs-Screen wechseln.
       final duelId = widget.duelId!;
@@ -106,6 +115,7 @@ class _DuelPlayScreenState extends ConsumerState<DuelPlayScreen> {
       return;
     }
 
+    if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) => DuelSummaryScreen(
@@ -117,6 +127,47 @@ class _DuelPlayScreenState extends ConsumerState<DuelPlayScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _recordDuelInStreak(dynamic result) async {
+    try {
+      final db = ref.read(databaseProvider);
+      final player = await ref.read(currentPlayerProvider.future);
+      final totalPairs = widget.rounds.fold<int>(
+        0,
+        (sum, r) => sum + r.pairs.length,
+      );
+      final sessionId = const Uuid().v4();
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final totalMs = result.totalMs as int;
+      final startedAt = now - totalMs;
+      await db.insertQuizSession(
+        QuizSessionsCompanion.insert(
+          id: sessionId,
+          playerId: player.id,
+          lessonId: widget.lessonId,
+          mode: const Value('duel_local'),
+          direction: Value(widget.direction.code),
+          startedAt: startedAt,
+          totalCount: Value(totalPairs),
+        ),
+      );
+      await db.finalizeQuizSession(
+        sessionId: sessionId,
+        finishedAt: now,
+        durationMs: totalMs,
+        correctCount: totalPairs,
+        totalCount: totalPairs,
+        hintsUsed: 0,
+        scorePoints: 0,
+      );
+      // Streak-Provider invalidieren, damit das nächste Profil-Öffnen den
+      // neuen Wert lädt.
+      ref.invalidate(currentStreakProvider);
+      ref.invalidate(streakDiagnosticsProvider);
+    } catch (_) {
+      // Best effort — kein Stopper für den Navigationsfluss.
+    }
   }
 
   @override

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -188,9 +190,15 @@ class _Results extends ConsumerWidget {
     return async.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(
-        child: Text(
-          'Fehler: $e',
-          style: theme.textTheme.bodyMedium,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            e is TimeoutException
+                ? 'Suche dauerte zu lange. Bist du online?'
+                : 'Fehler: $e',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyMedium,
+          ),
         ),
       ),
       data: (results) {
@@ -198,10 +206,27 @@ class _Results extends ConsumerWidget {
             results.where((p) => me == null || p.uid != me.uid).toList();
         if (filtered.isEmpty) {
           return Center(
-            child: Text(
-              'Niemanden gefunden.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Niemanden gefunden.',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Der gesuchte Account muss eingeloggt sein und seine Email bestätigt haben.',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
             ),
           );

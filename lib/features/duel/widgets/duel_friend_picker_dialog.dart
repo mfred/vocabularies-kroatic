@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../friends/friends_providers.dart';
 import '../../friends/models/user_profile.dart';
+import '../../friends/screens/user_search_screen.dart';
 
 /// Modal: zeigt die Freundesliste; gibt das ausgewählte [UserProfile] über
 /// `Navigator.pop(profile)` zurück. Bei Abbruch / leerer Liste null.
@@ -35,11 +36,24 @@ class DuelFriendPickerDialog extends ConsumerWidget {
                     const SizedBox(height: 8),
                     Text(
                       'Noch keine Freunde.\n'
-                      'Geh in „Freunde" und füge jemanden hinzu.',
+                      'Füg jemanden hinzu, um ihn herauszufordern.',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
+                    ),
+                    const SizedBox(height: 14),
+                    FilledButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const UserSearchScreen(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.person_add_alt),
+                      label: const Text('Freund hinzufügen'),
                     ),
                   ],
                 ),

@@ -53,53 +53,54 @@ class _DuelSummaryScreenState extends ConsumerState<DuelSummaryScreen> {
   }
 
   Future<void> _challengeFriend() async {
-    // Erst Auth-State prüfen — das ist die Quelle der Wahrheit für "ist
-    // eingeloggt". `myUserProfileProvider` ist ein Firestore-Stream und
-    // kann beim Tap noch leer sein, obwohl der User längst angemeldet ist
-    // (Race zwischen FirebaseAuth und Firestore-Profil-Stream).
-    final authUser = ref.read(authStateProvider).value;
-    if (authUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Bitte zuerst anmelden, um Freunde herauszufordern.',
-          ),
-        ),
-      );
-      return;
-    }
-    var me = ref.read(myUserProfileProvider).value;
-    if (me == null) {
-      try {
-        me = await ref
-            .read(userProfileServiceProvider)
-            .ensureProfile(authUser);
-      } catch (_) {
-        me = await ref
-            .read(userProfileServiceProvider)
-            .getByUid(authUser.uid);
-      }
-    }
-    if (me == null) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Profil konnte nicht geladen werden. Bitte erneut versuchen.',
-          ),
-        ),
-      );
-      return;
-    }
-    if (!mounted) return;
-    final picked = await showDialog<UserProfile>(
-      context: context,
-      builder: (_) => const DuelFriendPickerDialog(),
-    );
-    if (picked == null || !mounted) return;
-
+    // Sofort visuelles Feedback — sonst wirkt der Tap wie "nichts passiert",
+    // solange das Profil noch lädt.
     setState(() => _sending = true);
     try {
+      // Erst Auth-State prüfen — das ist die Quelle der Wahrheit für "ist
+      // eingeloggt". `myUserProfileProvider` ist ein Firestore-Stream und
+      // kann beim Tap noch leer sein, obwohl der User längst angemeldet ist
+      // (Race zwischen FirebaseAuth und Firestore-Profil-Stream).
+      final authUser = ref.read(authStateProvider).value;
+      if (authUser == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Bitte zuerst anmelden, um Freunde herauszufordern.',
+            ),
+          ),
+        );
+        return;
+      }
+      var me = ref.read(myUserProfileProvider).value;
+      if (me == null) {
+        try {
+          me = await ref
+              .read(userProfileServiceProvider)
+              .ensureProfile(authUser);
+        } catch (_) {
+          me = await ref
+              .read(userProfileServiceProvider)
+              .getByUid(authUser.uid);
+        }
+      }
+      if (me == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Profil konnte nicht geladen werden. Bitte erneut versuchen.',
+            ),
+          ),
+        );
+        return;
+      }
+      if (!mounted) return;
+      final picked = await showDialog<UserProfile>(
+        context: context,
+        builder: (_) => const DuelFriendPickerDialog(),
+      );
+      if (picked == null || !mounted) return;
       await ref.read(duelServiceProvider).createChallenge(
             challengerUid: me.uid,
             challengerDisplayName: me.displayName,

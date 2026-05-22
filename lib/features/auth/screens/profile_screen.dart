@@ -173,6 +173,7 @@ class _StreakDiagnosticsView extends StatelessWidget {
       ..writeln('Aktueller Streak:       ${data.currentStreak} Tag(e)')
       ..writeln('Finalisierte Sessions:  ${data.finishedSessions}')
       ..writeln('Unfertige Sessions:     ${data.unfinishedSessions}')
+      ..writeln('Firestore-Profil:       ${data.firestoreProfileStatus}')
       ..writeln()
       ..writeln('Distinkte Spieltage (neueste zuerst):');
     if (data.distinctDays.isEmpty) {
@@ -220,6 +221,7 @@ class _StreakDiagnosticsView extends StatelessWidget {
         _row('Aktueller Streak', '${data.currentStreak} Tag(e)', mono),
         _row('Finalisierte Sessions', '${data.finishedSessions}', mono),
         _row('Unfertige Sessions', '${data.unfinishedSessions}', mono),
+        _row('Firestore-Profil', data.firestoreProfileStatus, mono),
         const SizedBox(height: 8),
         Text('Distinkte Spieltage (neueste zuerst):',
             style: theme.textTheme.labelMedium),

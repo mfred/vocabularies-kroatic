@@ -138,6 +138,7 @@ class StreakDiagnostics {
     required this.distinctDays,
     required this.currentStreak,
     required this.now,
+    required this.firestoreProfileStatus,
   });
 
   final String playerId;
@@ -148,6 +149,12 @@ class StreakDiagnostics {
   final List<DateTime> distinctDays;
   final int currentStreak;
   final DateTime now;
+
+  /// Klartext-Status des Firestore-`users/{uid}`-Profils:
+  /// "OK", "fehlt — bitte einmal abmelden und neu anmelden",
+  /// "unvollständig (displayNameLower fehlt)", "nicht eingeloggt" oder
+  /// "Fehler: …". Sichtbar im Diagnose-Block + im Copy-Text.
+  final String firestoreProfileStatus;
 }
 
 final streakDiagnosticsProvider =
@@ -166,6 +173,43 @@ final streakDiagnosticsProvider =
   final days = daySet.toList()..sort((a, b) => b.compareTo(a));
   final currentStreak =
       await ref.watch(streakServiceProvider).currentStreak(player.id);
+
+  // Firestore-Profil-Status: prüft, ob das `users/{uid}`-Doc existiert
+  // und die für die Friend-Suche nötigen Felder gesetzt sind.
+  String profileStatus;
+  final auth = ref.read(authStateProvider).value;
+  if (auth == null) {
+    profileStatus = 'nicht eingeloggt';
+  } else if (!auth.emailVerified) {
+    profileStatus = 'Email noch nicht bestätigt';
+  } else {
+    try {
+      final doc = await ref
+          .read(firestoreProvider)
+          .collection('users')
+          .doc(auth.uid)
+          .get();
+      if (!doc.exists) {
+        profileStatus =
+            'fehlt — bitte einmal abmelden und neu anmelden';
+      } else {
+        final data = doc.data() ?? const <String, dynamic>{};
+        final hasLower = (data['displayNameLower'] as String?)?.isNotEmpty
+            ?? false;
+        final hasEmail = (data['email'] as String?)?.isNotEmpty ?? false;
+        if (!hasLower) {
+          profileStatus = 'unvollständig (displayNameLower fehlt)';
+        } else if (!hasEmail) {
+          profileStatus = 'unvollständig (email fehlt)';
+        } else {
+          profileStatus = 'OK';
+        }
+      }
+    } catch (e) {
+      profileStatus = 'Fehler: $e';
+    }
+  }
+
   return StreakDiagnostics(
     playerId: player.id,
     finishedSessions: finished.length,
@@ -173,6 +217,7 @@ final streakDiagnosticsProvider =
     distinctDays: days,
     currentStreak: currentStreak,
     now: DateTime.now(),
+    firestoreProfileStatus: profileStatus,
   );
 });
 

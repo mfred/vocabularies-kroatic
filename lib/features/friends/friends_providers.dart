@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shared/providers.dart';
@@ -69,28 +71,56 @@ final friendsListProvider = StreamProvider<List<UserProfile>>((ref) async* {
 enum UserSearchKind { email, name }
 
 /// Verwende [searchUsersProvider] über ein typisiertes Args-Objekt.
+///
+/// Beide Such-Pfade haben einen 8-Sekunden-Timeout — verhindert, dass der
+/// UI-Spinner ewig dreht, wenn Firestore wegen Permission-Race oder
+/// Netzwerk-Latenz nicht zeitnah antwortet.
 final searchUsersProvider = FutureProvider.autoDispose
     .family<List<UserProfile>, ({UserSearchKind kind, String query})>(
         (ref, args) async {
   final svc = ref.watch(userProfileServiceProvider);
+  Future<List<UserProfile>> fut;
   switch (args.kind) {
     case UserSearchKind.email:
-      return svc.searchByEmail(args.query);
+      fut = svc.searchByEmail(args.query);
+      break;
     case UserSearchKind.name:
-      return svc.searchByNamePrefix(args.query);
+      fut = svc.searchByNamePrefix(args.query);
+      break;
   }
+  return fut.timeout(
+    const Duration(seconds: 8),
+    onTimeout: () => throw TimeoutException(
+      'Suche dauerte zu lange. Bist du online?',
+    ),
+  );
 });
 
 /// Side-effect-Provider: sorgt dafür, dass `users/{uid}` bei jedem Login
-/// existiert (idempotent). Wird in [app.dart] über `ref.listen` ausgelöst.
+/// existiert (idempotent). Wird in [app.dart] über `ref.watch` instanziiert.
 /// **Wichtig**: legt das Profil nur an, wenn die Email bestätigt ist
 /// (Double-Opt-In-Anforderung).
+///
+/// Initial-Sweep: zusätzlich zum `ref.listen` (das nur auf **künftige**
+/// Auth-State-Änderungen reagiert) wird der **aktuelle** Auth-State direkt
+/// beim Provider-Setup geprüft — sonst geht das Event verloren, wenn der
+/// User die App schon im verifizierten Zustand öffnet.
 final ensureProfileOnLoginProvider = Provider<void>((ref) {
+  final svc = ref.watch(userProfileServiceProvider);
+  final initial = ref.read(authStateProvider).value;
+  if (initial != null && initial.emailVerified) {
+    // Fire-and-forget; Fehler werden ignoriert, nächster Auth-Event retry.
+    unawaited(() async {
+      try {
+        await svc.ensureProfile(initial);
+      } catch (_) {}
+    }());
+  }
   ref.listen(authStateProvider, (prev, next) async {
     final user = next.value;
     if (user == null || !user.emailVerified) return;
     try {
-      await ref.read(userProfileServiceProvider).ensureProfile(user);
+      await svc.ensureProfile(user);
     } catch (_) {
       // Ignorieren — nicht blockierend; nächste App-Open ruft erneut auf.
     }
