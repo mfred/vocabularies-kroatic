@@ -2,15 +2,64 @@ import 'package:flutter/material.dart';
 
 import '../models/leaderboard_entry.dart';
 
-class LeaderboardRow extends StatelessWidget {
-  const LeaderboardRow({super.key, required this.entry});
+class LeaderboardRow extends StatefulWidget {
+  const LeaderboardRow({
+    super.key,
+    required this.entry,
+    this.isFriend = false,
+    this.isSelf = false,
+    this.onSendRequest,
+  });
 
   final LeaderboardEntry entry;
+  final bool isFriend;
+  final bool isSelf;
+
+  /// Wenn gesetzt: rechts wird ein kleiner Plus-Button gerendert, der bei
+  /// Tap die Freundschaftsanfrage absendet. `null` bedeutet: kein Button —
+  /// z. B. weil eigener Eintrag, bereits-Freund oder nicht eingeloggt.
+  final Future<void> Function()? onSendRequest;
+
+  @override
+  State<LeaderboardRow> createState() => _LeaderboardRowState();
+}
+
+class _LeaderboardRowState extends State<LeaderboardRow> {
+  bool _sending = false;
+  bool _sent = false;
+
+  Future<void> _handleSend() async {
+    final cb = widget.onSendRequest;
+    if (cb == null || _sending || _sent) return;
+    setState(() => _sending = true);
+    try {
+      await cb();
+      if (!mounted) return;
+      setState(() {
+        _sent = true;
+        _sending = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Anfrage an ${widget.entry.displayName} gesendet.',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _sending = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final entry = widget.entry;
     final medal = _medalFor(entry.rank);
     final gamesLabel =
         entry.gamesPlayed == 1 ? '1 Spiel' : '${entry.gamesPlayed} Spiele';
@@ -52,11 +101,26 @@ class LeaderboardRow extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      entry.displayName,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            entry.displayName,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        if (widget.isFriend) ...[
+                          const SizedBox(width: 6),
+                          Icon(
+                            Icons.star_rounded,
+                            size: 18,
+                            color: scheme.tertiary,
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -69,6 +133,28 @@ class LeaderboardRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
+              if (widget.onSendRequest != null) ...[
+                SizedBox(
+                  width: 36,
+                  height: 36,
+                  child: _sent
+                      ? Icon(Icons.check, color: scheme.primary)
+                      : _sending
+                          ? const Padding(
+                              padding: EdgeInsets.all(8),
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2),
+                            )
+                          : IconButton(
+                              padding: EdgeInsets.zero,
+                              icon: const Icon(
+                                  Icons.person_add_alt_outlined),
+                              tooltip: 'Als Freund hinzufügen',
+                              onPressed: _handleSend,
+                            ),
+                ),
+                const SizedBox(width: 6),
+              ],
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [

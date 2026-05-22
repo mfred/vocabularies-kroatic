@@ -5,6 +5,7 @@ import '../../../shared/firebase_status.dart';
 import '../../../shared/providers.dart';
 import '../../../shared/widgets/tablet_constrained.dart';
 import '../../auth/screens/login_screen.dart';
+import '../../friends/friends_providers.dart';
 import '../models/leaderboard_filter.dart';
 import '../models/leaderboard_range.dart';
 import '../widgets/leaderboard_row.dart';
@@ -157,6 +158,11 @@ class _LeaderboardTab extends ConsumerWidget {
             ),
           );
         }
+        final friends = ref.watch(friendsListProvider).value ?? const [];
+        final friendUids = friends.map((p) => p.uid).toSet();
+        final auth = ref.watch(authStateProvider).value;
+        final selfUid = auth?.uid;
+        final canSendRequests = auth != null && auth.emailVerified;
         return RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(leaderboardProvider(filter));
@@ -166,7 +172,34 @@ class _LeaderboardTab extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             itemCount: entries.length,
             itemBuilder: (context, i) {
-              return LeaderboardRow(entry: entries[i]);
+              final e = entries[i];
+              final isSelf = e.uid == selfUid;
+              final isFriend = friendUids.contains(e.uid);
+              final showAddButton =
+                  canSendRequests && !isSelf && !isFriend;
+              return LeaderboardRow(
+                entry: e,
+                isSelf: isSelf,
+                isFriend: isFriend,
+                onSendRequest: !showAddButton
+                    ? null
+                    : () async {
+                        final authNow =
+                            ref.read(authStateProvider).value;
+                        if (authNow == null) {
+                          throw StateError('Nicht eingeloggt.');
+                        }
+                        var me = ref.read(myUserProfileProvider).value;
+                        me ??= await ref
+                            .read(userProfileServiceProvider)
+                            .ensureProfile(authNow);
+                        await ref.read(friendServiceProvider).sendRequest(
+                              fromUid: me.uid,
+                              fromDisplayName: me.displayName,
+                              toUid: e.uid,
+                            );
+                      },
+              );
             },
           ),
         );

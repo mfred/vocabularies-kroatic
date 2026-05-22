@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/database.dart';
 import '../../../shared/providers.dart';
+import '../../../shared/widgets/tablet_constrained.dart';
 import '../models/quiz_direction.dart';
 import '../models/quiz_format.dart';
 import 'quiz_screen.dart';
@@ -104,50 +105,52 @@ class _QuizSetupScreenState extends ConsumerState<QuizSetupScreen> {
         ),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _DirectionPicker(
-                direction: direction,
-                onChanged: (d) =>
-                    ref.read(preferredDirectionProvider.notifier).set(d),
-              ),
-              const SizedBox(height: 12),
-              if (ref
-                      .watch(doublePointsActiveProvider)
-                      .maybeWhen(data: (v) => v, orElse: () => false))
-                _DoublePointsBanner(),
-              const SizedBox(height: 8),
-              Text(
-                'Spiel wählen',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
+        child: TabletConstrained(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _DirectionPicker(
+                  direction: direction,
+                  onChanged: (d) =>
+                      ref.read(preferredDirectionProvider.notifier).set(d),
                 ),
-              ),
-              const SizedBox(height: 12),
-              for (final f in QuizFormat.values) ...[
-                _FormatTile(
-                  icon: _iconForFormat(f),
-                  label: f.label,
-                  selected: _format == f,
-                  onTap: () => setState(() => _format = f),
-                ),
+                const SizedBox(height: 12),
+                if (ref
+                        .watch(doublePointsActiveProvider)
+                        .maybeWhen(data: (v) => v, orElse: () => false))
+                  _DoublePointsBanner(),
                 const SizedBox(height: 8),
+                Text(
+                  'Spiel wählen',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                for (final f in QuizFormat.values) ...[
+                  _FormatTile(
+                    icon: _iconForFormat(f),
+                    label: f.label,
+                    selected: _format == f,
+                    onTap: () => setState(() => _format = f),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                const SizedBox(height: 24),
+                FilledButton.icon(
+                  onPressed: canStart ? () => _startQuiz(direction) : null,
+                  icon: Icon(
+                    widget.reviewMode ? Icons.refresh : Icons.play_arrow,
+                  ),
+                  label: Text(buttonLabel),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                ),
               ],
-              const Spacer(),
-              FilledButton.icon(
-                onPressed: canStart ? () => _startQuiz(direction) : null,
-                icon: Icon(
-                  widget.reviewMode ? Icons.refresh : Icons.play_arrow,
-                ),
-                label: Text(buttonLabel),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
