@@ -50,8 +50,12 @@ class _DuelSummaryScreenState extends ConsumerState<DuelSummaryScreen> {
   }
 
   Future<void> _challengeFriend() async {
-    final me = ref.read(myUserProfileProvider).value;
-    if (me == null) {
+    // Erst Auth-State prüfen — das ist die Quelle der Wahrheit für "ist
+    // eingeloggt". `myUserProfileProvider` ist ein Firestore-Stream und
+    // kann beim Tap noch leer sein, obwohl der User längst angemeldet ist
+    // (Race zwischen FirebaseAuth und Firestore-Profil-Stream).
+    final authUser = ref.read(authStateProvider).value;
+    if (authUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -61,6 +65,30 @@ class _DuelSummaryScreenState extends ConsumerState<DuelSummaryScreen> {
       );
       return;
     }
+    var me = ref.read(myUserProfileProvider).value;
+    if (me == null) {
+      try {
+        me = await ref
+            .read(userProfileServiceProvider)
+            .ensureProfile(authUser);
+      } catch (_) {
+        me = await ref
+            .read(userProfileServiceProvider)
+            .getByUid(authUser.uid);
+      }
+    }
+    if (me == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Profil konnte nicht geladen werden. Bitte erneut versuchen.',
+          ),
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
     final picked = await showDialog<UserProfile>(
       context: context,
       builder: (_) => const DuelFriendPickerDialog(),

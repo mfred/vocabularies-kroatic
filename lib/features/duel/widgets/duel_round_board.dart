@@ -7,6 +7,10 @@ import '../models/duel_pair.dart';
 /// rechts DragTargets (Antwort-Sprache). Korrekter Drop = beide Karten werden
 /// als "matched" eingefärbt (gelocked); falscher Drop = +200 ms Strafe, Karte
 /// springt automatisch zurück (Standard-Verhalten von [Draggable.feedback]).
+///
+/// Pro Slot werden linke und rechte Karte über eine `IntrinsicHeight`-Row auf
+/// gleiche Höhe gezwungen, damit das Layout stabil bleibt, auch wenn ein Text
+/// umbricht.
 class DuelRoundBoard extends StatelessWidget {
   const DuelRoundBoard({super.key, required this.controller});
 
@@ -18,48 +22,56 @@ class DuelRoundBoard extends StatelessWidget {
     final matched = controller.matchedItemIds;
     final left = round.pairs;
     final right = round.rightPairs;
+    final slotCount = left.length;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
         children: [
-          Expanded(
-            child: Column(
-              children: [
-                for (final p in left) ...[
-                  _DraggableWordCard(
-                    pair: p,
-                    matched: matched.contains(p.itemId),
-                    onCanceled: controller.registerIncorrectAttempt,
+          for (int i = 0; i < slotCount; i++) ...[
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _DraggableWordCard(
+                      pair: left[i],
+                      matched: matched.contains(left[i].itemId),
+                      onCanceled: controller.registerIncorrectAttempt,
+                    ),
                   ),
-                  const SizedBox(height: 10),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              children: [
-                for (final p in right) ...[
-                  _DropTargetCard(
-                    pair: p,
-                    matched: matched.contains(p.itemId),
-                    onAccepted: () => controller.registerCorrectMatch(p.itemId),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _DropTargetCard(
+                      pair: right[i],
+                      matched: matched.contains(right[i].itemId),
+                      onAccepted: () =>
+                          controller.registerCorrectMatch(right[i].itemId),
+                    ),
                   ),
-                  const SizedBox(height: 10),
                 ],
-              ],
+              ),
             ),
-          ),
+            if (i < slotCount - 1) const SizedBox(height: 10),
+          ],
         ],
       ),
     );
   }
 }
 
-class _DraggableWordCard extends StatelessWidget {
+// Hardcoded Grün-Töne für "matched" — bewusst Theme-unabhängig, weil das
+// ColorScheme aus dem blauen Seed (`0xFF1565C0`) eine rosa/rötliche Tertiary
+// generiert, was visuell wie "falsch" wirkt.
+const Color _kMatchedBg = Color(0xFFDFF5E1);
+const Color _kMatchedBorder = Color(0xFF2E7D32);
+const Color _kMatchedText = Color(0xFF1B5E20);
+
+// Sichtbarkeitsfenster der grünen "matched"-Karte, bevor sie ausfaded.
+const Duration _kMatchedHold = Duration(milliseconds: 600);
+const Duration _kMatchedFade = Duration(milliseconds: 400);
+
+class _DraggableWordCard extends StatefulWidget {
   const _DraggableWordCard({
     required this.pair,
     required this.matched,
@@ -71,25 +83,30 @@ class _DraggableWordCard extends StatelessWidget {
   final VoidCallback onCanceled;
 
   @override
+  State<_DraggableWordCard> createState() => _DraggableWordCardState();
+}
+
+class _DraggableWordCardState extends State<_DraggableWordCard> {
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    if (matched) {
-      return _MatchedCard(text: pair.leftText);
+    if (widget.matched) {
+      return _FadingMatchedCard(text: widget.pair.leftText);
     }
     final card = _WordCard(
-      text: pair.leftText,
+      text: widget.pair.leftText,
       backgroundColor: theme.colorScheme.surface,
       borderColor: theme.colorScheme.outline,
       textColor: theme.colorScheme.onSurface,
     );
     return Draggable<String>(
-      data: pair.itemId,
+      data: widget.pair.itemId,
       feedback: Material(
         color: Colors.transparent,
         child: SizedBox(
           width: MediaQuery.of(context).size.width * 0.42,
           child: _WordCard(
-            text: pair.leftText,
+            text: widget.pair.leftText,
             backgroundColor: theme.colorScheme.primary,
             borderColor: theme.colorScheme.primary,
             textColor: theme.colorScheme.onPrimary,
@@ -98,7 +115,7 @@ class _DraggableWordCard extends StatelessWidget {
         ),
       ),
       childWhenDragging: Opacity(opacity: 0.35, child: card),
-      onDraggableCanceled: (_, _) => onCanceled(),
+      onDraggableCanceled: (_, _) => widget.onCanceled(),
       child: card,
     );
   }
@@ -126,7 +143,7 @@ class _DropTargetCardState extends State<_DropTargetCard> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     if (widget.matched) {
-      return _MatchedCard(text: widget.pair.rightText);
+      return _FadingMatchedCard(text: widget.pair.rightText);
     }
     return DragTarget<String>(
       onWillAcceptWithDetails: (details) {
@@ -209,41 +226,61 @@ class _WordCard extends StatelessWidget {
   }
 }
 
-class _MatchedCard extends StatelessWidget {
-  const _MatchedCard({required this.text});
+/// Grüne "matched"-Karte, die sich nach kurzer Hold-Phase auf opacity 0
+/// ausblendet. Die Box bleibt im Layout (gleiche Höhe wie aktive Karten),
+/// damit nichts springt — nur transparent.
+class _FadingMatchedCard extends StatefulWidget {
+  const _FadingMatchedCard({required this.text});
 
   final String text;
 
   @override
+  State<_FadingMatchedCard> createState() => _FadingMatchedCardState();
+}
+
+class _FadingMatchedCardState extends State<_FadingMatchedCard> {
+  double _opacity = 1.0;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(_kMatchedHold, () {
+      if (!mounted) return;
+      setState(() => _opacity = 0.0);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    return Container(
-      constraints: const BoxConstraints(minHeight: 60),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: scheme.tertiaryContainer.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: scheme.tertiary, width: 1.5),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.check_circle, size: 18, color: scheme.tertiary),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: scheme.onTertiaryContainer,
-                fontWeight: FontWeight.w600,
-                decoration: TextDecoration.lineThrough,
-                decorationColor:
-                    scheme.onTertiaryContainer.withValues(alpha: 0.5),
+    return AnimatedOpacity(
+      opacity: _opacity,
+      duration: _kMatchedFade,
+      curve: Curves.easeOut,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 60),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: _kMatchedBg,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _kMatchedBorder, width: 1.5),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.check_circle, size: 18, color: _kMatchedBorder),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                widget.text,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: _kMatchedText,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
