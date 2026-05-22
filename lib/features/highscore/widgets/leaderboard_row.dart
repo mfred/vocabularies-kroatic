@@ -155,23 +155,12 @@ class _LeaderboardRowState extends State<LeaderboardRow> {
                 ),
                 const SizedBox(width: 6),
               ],
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    _formatScore(entry.totalScorePoints),
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      color: scheme.primary,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  Text(
-                    'P',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
+              Text(
+                _formatScore(entry.totalScorePoints),
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: scheme.primary,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ],
           ),

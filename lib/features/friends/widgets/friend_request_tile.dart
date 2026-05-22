@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/user_avatar.dart';
 import '../models/friend_request.dart';
 
 /// Ein eingehender oder ausgehender Anfrage-Eintrag.
@@ -32,15 +33,11 @@ class FriendRequestTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            backgroundColor: scheme.primaryContainer,
-            child: Text(
-              _initial(request.fromDisplayName),
-              style: TextStyle(
-                color: scheme.onPrimaryContainer,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+          UserAvatar(
+            // Incoming: vom Sender (fromUid). Outgoing: zum Empfänger (toUid).
+            seed: _isIncoming ? request.fromUid : request.toUid,
+            fallbackText: request.fromDisplayName,
+            size: 40,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -86,11 +83,5 @@ class FriendRequestTile extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  String _initial(String name) {
-    final t = name.trim();
-    if (t.isEmpty) return '?';
-    return t.substring(0, 1).toUpperCase();
   }
 }

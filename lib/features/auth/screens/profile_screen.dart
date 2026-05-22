@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/providers.dart';
+import '../../../shared/widgets/user_avatar.dart';
 
 String _fmtDay(DateTime d) =>
     '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
@@ -45,21 +46,10 @@ class ProfileScreen extends ConsumerWidget {
                     children: [
                       Row(
                         children: [
-                          CircleAvatar(
-                            radius: 28,
-                            backgroundColor: scheme.primaryContainer,
-                            child: Text(
-                              (user.displayName?.isNotEmpty ?? false)
-                                  ? user.displayName!
-                                      .substring(0, 1)
-                                      .toUpperCase()
-                                  : '?',
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w700,
-                                color: scheme.onPrimaryContainer,
-                              ),
-                            ),
+                          UserAvatar(
+                            seed: user.uid,
+                            fallbackText: user.displayName ?? '',
+                            size: 56,
                           ),
                           const SizedBox(width: 16),
                           Expanded(

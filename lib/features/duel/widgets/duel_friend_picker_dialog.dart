@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/widgets/user_avatar.dart';
 import '../../friends/friends_providers.dart';
 import '../../friends/models/user_profile.dart';
 import '../../friends/screens/user_search_screen.dart';
@@ -106,14 +107,11 @@ class _FriendRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
           child: Row(
             children: [
-              CircleAvatar(
-                backgroundColor: scheme.primaryContainer,
-                child: Text(
-                  profile.displayName.isEmpty
-                      ? '?'
-                      : profile.displayName.substring(0, 1).toUpperCase(),
-                  style: TextStyle(color: scheme.onPrimaryContainer),
-                ),
+              UserAvatar(
+                seed: profile.uid,
+                style: profile.avatarStyle ?? 'lorelei',
+                fallbackText: profile.displayName,
+                size: 40,
               ),
               const SizedBox(width: 12),
               Expanded(

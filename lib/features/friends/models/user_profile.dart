@@ -8,6 +8,7 @@ class UserProfile {
     required this.email,
     required this.friendCode,
     required this.createdAtMs,
+    this.avatarStyle,
   });
 
   final String uid;
@@ -17,6 +18,10 @@ class UserProfile {
   final String friendCode;
   final int createdAtMs;
 
+  /// DiceBear-Style-ID (z. B. `lorelei`, `bottts`, `avataaars`). `null` →
+  /// die UI nutzt den App-Default (`lorelei`).
+  final String? avatarStyle;
+
   factory UserProfile.fromMap(String uid, Map<String, dynamic> map) {
     return UserProfile(
       uid: uid,
@@ -25,6 +30,7 @@ class UserProfile {
       email: map['email'] as String? ?? '',
       friendCode: map['friendCode'] as String? ?? '',
       createdAtMs: (map['createdAtMs'] as num?)?.toInt() ?? 0,
+      avatarStyle: map['avatarStyle'] as String?,
     );
   }
 
@@ -34,5 +40,6 @@ class UserProfile {
         'email': email,
         'friendCode': friendCode,
         'createdAtMs': createdAtMs,
+        if (avatarStyle != null) 'avatarStyle': avatarStyle,
       };
 }

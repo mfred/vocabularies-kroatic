@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/user_avatar.dart';
 import '../models/user_profile.dart';
 
 class FriendListTile extends StatelessWidget {
@@ -25,15 +26,11 @@ class FriendListTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            backgroundColor: scheme.primaryContainer,
-            child: Text(
-              _initial(profile.displayName),
-              style: TextStyle(
-                color: scheme.onPrimaryContainer,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+          UserAvatar(
+            seed: profile.uid,
+            style: profile.avatarStyle ?? 'lorelei',
+            fallbackText: profile.displayName,
+            size: 40,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -55,9 +52,4 @@ class FriendListTile extends StatelessWidget {
     );
   }
 
-  String _initial(String name) {
-    final t = name.trim();
-    if (t.isEmpty) return '?';
-    return t.substring(0, 1).toUpperCase();
-  }
 }

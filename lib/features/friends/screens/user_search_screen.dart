@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/widgets/user_avatar.dart';
 import '../friends_providers.dart';
 import '../models/user_profile.dart';
 
@@ -241,14 +242,11 @@ class _ResultTileState extends ConsumerState<_ResultTile> {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            backgroundColor: scheme.primaryContainer,
-            child: Text(
-              widget.profile.displayName.isEmpty
-                  ? '?'
-                  : widget.profile.displayName.substring(0, 1).toUpperCase(),
-              style: TextStyle(color: scheme.onPrimaryContainer),
-            ),
+          UserAvatar(
+            seed: widget.profile.uid,
+            style: widget.profile.avatarStyle ?? 'lorelei',
+            fallbackText: widget.profile.displayName,
+            size: 40,
           ),
           const SizedBox(width: 12),
           Expanded(
