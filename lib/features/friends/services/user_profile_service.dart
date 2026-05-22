@@ -74,6 +74,12 @@ class UserProfileService {
     return UserProfile.fromMap(uid, snap.data() ?? {});
   }
 
+  /// Schreibt den DiceBear-Style für den Avatar. Wird vom AvatarPickerSheet
+  /// im Profil-Screen aufgerufen.
+  Future<void> updateAvatarStyle(String uid, String style) async {
+    await _users.doc(uid).update({'avatarStyle': style});
+  }
+
   Future<List<UserProfile>> getManyByUids(Iterable<String> uids) async {
     final unique = uids.toSet().toList();
     if (unique.isEmpty) return const [];

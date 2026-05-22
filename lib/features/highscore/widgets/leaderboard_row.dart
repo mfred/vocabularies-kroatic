@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/user_avatar.dart';
 import '../models/leaderboard_entry.dart';
 
 class LeaderboardRow extends StatefulWidget {
@@ -83,7 +84,7 @@ class _LeaderboardRowState extends State<LeaderboardRow> {
           child: Row(
             children: [
               SizedBox(
-                width: 44,
+                width: 40,
                 child: Center(
                   child: medal != null
                       ? Text(medal, style: const TextStyle(fontSize: 22))
@@ -96,7 +97,13 @@ class _LeaderboardRowState extends State<LeaderboardRow> {
                         ),
                 ),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 6),
+              UserAvatar(
+                seed: entry.uid,
+                fallbackText: entry.displayName,
+                size: 32,
+              ),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

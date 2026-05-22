@@ -1,6 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+/// Auswahl der DiceBear-Styles, die im AvatarPickerSheet zur Wahl stehen.
+/// Der erste Eintrag ist der App-Default für unverifizierte/alte Profile.
+const List<String> kDiceBearStyles = <String>[
+  'lorelei',
+  'bottts',
+  'avataaars',
+  'pixel-art',
+  'fun-emoji',
+  'notionists',
+  'adventurer',
+  'miniavs',
+  'personas',
+  'thumbs',
+  'shapes',
+  'identicon',
+];
+
+const String kDefaultAvatarStyle = 'lorelei';
+
 /// Deterministischer Avatar via [DiceBear](https://www.dicebear.com).
 ///
 /// Aus dem `seed` (i. d. R. die UID des Users) wird per HTTP ein SVG geladen.

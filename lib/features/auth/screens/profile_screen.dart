@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/providers.dart';
 import '../../../shared/widgets/user_avatar.dart';
+import '../../friends/friends_providers.dart';
+import 'avatar_picker_sheet.dart';
 
 String _fmtDay(DateTime d) =>
     '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
@@ -16,6 +18,8 @@ class ProfileScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final user = ref.watch(authStateProvider).value;
+    final myProfile = ref.watch(myUserProfileProvider).value;
+    final avatarStyle = myProfile?.avatarStyle ?? kDefaultAvatarStyle;
     final streakAsync = ref.watch(currentStreakProvider);
 
     if (user == null) {
@@ -46,10 +50,44 @@ class ProfileScreen extends ConsumerWidget {
                     children: [
                       Row(
                         children: [
-                          UserAvatar(
-                            seed: user.uid,
-                            fallbackText: user.displayName ?? '',
-                            size: 56,
+                          InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: () => showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              showDragHandle: false,
+                              builder: (_) => AvatarPickerSheet(
+                                uid: user.uid,
+                                currentStyle: avatarStyle,
+                              ),
+                            ),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                UserAvatar(
+                                  seed: user.uid,
+                                  style: avatarStyle,
+                                  fallbackText: user.displayName ?? '',
+                                  size: 56,
+                                ),
+                                Positioned(
+                                  right: 0,
+                                  bottom: 0,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(3),
+                                    decoration: BoxDecoration(
+                                      color: scheme.primary,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                          color: scheme.surface, width: 2),
+                                    ),
+                                    child: Icon(Icons.edit,
+                                        size: 12,
+                                        color: scheme.onPrimary),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
