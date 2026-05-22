@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../auth/screens/login_screen.dart';
+import '../../auth/screens/verify_email_screen.dart';
 import '../../friends/friends_providers.dart';
 import '../../friends/models/user_profile.dart';
 import '../../quiz/models/quiz_direction.dart';
@@ -126,6 +128,72 @@ class _DuelSummaryScreenState extends ConsumerState<DuelSummaryScreen> {
     }
   }
 
+  /// Liefert je nach Auth-Zustand den passenden Primär-Button:
+  /// herausfordern / Email bestätigen / Anmelden / nicht verfügbar.
+  Widget _buildPrimaryAction({
+    required BuildContext context,
+    required bool firebaseReady,
+    required bool isLoggedIn,
+    required bool isVerified,
+    required bool canChallenge,
+    required String? userEmail,
+  }) {
+    const buttonStyle = EdgeInsets.symmetric(vertical: 14);
+
+    if (_sending) {
+      return FilledButton.icon(
+        onPressed: null,
+        icon: const SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        label: const Text('Wird gesendet …'),
+        style: FilledButton.styleFrom(padding: buttonStyle),
+      );
+    }
+
+    if (canChallenge) {
+      return FilledButton.icon(
+        onPressed: _challengeFriend,
+        icon: const Icon(Icons.send),
+        label: const Text('Freund herausfordern'),
+        style: FilledButton.styleFrom(padding: buttonStyle),
+      );
+    }
+
+    if (firebaseReady && isLoggedIn && !isVerified) {
+      return FilledButton.icon(
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => VerifyEmailScreen(email: userEmail ?? ''),
+          ),
+        ),
+        icon: const Icon(Icons.mark_email_unread_outlined),
+        label: const Text('Email bestätigen'),
+        style: FilledButton.styleFrom(padding: buttonStyle),
+      );
+    }
+
+    if (firebaseReady && !isLoggedIn) {
+      return FilledButton.icon(
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        ),
+        icon: const Icon(Icons.login),
+        label: const Text('Anmelden für Herausforderung'),
+        style: FilledButton.styleFrom(padding: buttonStyle),
+      );
+    }
+
+    return FilledButton.icon(
+      onPressed: null,
+      icon: const Icon(Icons.cloud_off_outlined),
+      label: const Text('Login nicht verfügbar'),
+      style: FilledButton.styleFrom(padding: buttonStyle),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -133,7 +201,9 @@ class _DuelSummaryScreenState extends ConsumerState<DuelSummaryScreen> {
     final firebaseReady = FirebaseStatus.instance.isReady;
     final authUser =
         firebaseReady ? ref.watch(authStateProvider).value : null;
-    final canChallenge = firebaseReady && authUser != null;
+    final isLoggedIn = authUser != null;
+    final isVerified = isLoggedIn && authUser.emailVerified;
+    final canChallenge = firebaseReady && isVerified;
 
     return Scaffold(
       appBar: AppBar(
@@ -221,21 +291,13 @@ class _DuelSummaryScreenState extends ConsumerState<DuelSummaryScreen> {
                 ),
               ),
               const SizedBox(height: 32),
-              FilledButton.icon(
-                onPressed: _sending || !canChallenge ? null : _challengeFriend,
-                icon: _sending
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.send),
-                label: Text(canChallenge
-                    ? 'Freund herausfordern'
-                    : 'Login erforderlich'),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
+              _buildPrimaryAction(
+                context: context,
+                firebaseReady: firebaseReady,
+                isLoggedIn: isLoggedIn,
+                isVerified: isVerified,
+                canChallenge: canChallenge,
+                userEmail: authUser?.email,
               ),
               const SizedBox(height: 8),
               OutlinedButton.icon(

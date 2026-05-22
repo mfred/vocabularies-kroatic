@@ -246,23 +246,32 @@ class _DuelSlotCardState extends State<_DuelSlotCard>
       },
     );
 
-    return Draggable<_DragPayload>(
-      data: _DragPayload(widget.side, widget.pair.itemId),
-      feedback: Material(
-        color: Colors.transparent,
-        child: SizedBox(
-          width: math.min(MediaQuery.of(context).size.width * 0.42, 320),
-          child: _WordCard(
-            text: widget.text,
-            backgroundColor: theme.colorScheme.primary,
-            borderColor: theme.colorScheme.primary,
-            textColor: theme.colorScheme.onPrimary,
-            elevated: true,
+    // Wir wrappen Draggable + DragTarget in ein `Center`, damit das DragTarget
+    // nur die natürliche Höhe der `_WordCard` (≈ 60 px + Padding) als
+    // Hit-Test-Area belegt — nicht den ganzen IntrinsicHeight-Slot, der durch
+    // `crossAxisAlignment: stretch` oft viel höher ist (wenn der Partner-Slot
+    // einen längeren, mehrzeiligen Text hat). So fallen Drops in den ober-/
+    // unter-leeren Bereich eines Slots als „daneben" durch und lösen keine
+    // Strafzeit aus.
+    return Center(
+      child: Draggable<_DragPayload>(
+        data: _DragPayload(widget.side, widget.pair.itemId),
+        feedback: Material(
+          color: Colors.transparent,
+          child: SizedBox(
+            width: math.min(MediaQuery.of(context).size.width * 0.42, 320),
+            child: _WordCard(
+              text: widget.text,
+              backgroundColor: theme.colorScheme.primary,
+              borderColor: theme.colorScheme.primary,
+              textColor: theme.colorScheme.onPrimary,
+              elevated: true,
+            ),
           ),
         ),
+        childWhenDragging: Opacity(opacity: 0.35, child: card),
+        child: dragTarget,
       ),
-      childWhenDragging: Opacity(opacity: 0.35, child: card),
-      child: dragTarget,
     );
   }
 }

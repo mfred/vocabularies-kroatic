@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/providers.dart';
@@ -26,7 +27,7 @@ class ProfileScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Mein Profil')),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -137,7 +138,7 @@ class ProfileScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-              const Spacer(),
+              const SizedBox(height: 24),
               OutlinedButton.icon(
                 onPressed: () async {
                   final auth = ref.read(authServiceProvider);
@@ -163,6 +164,35 @@ class _StreakDiagnosticsView extends StatelessWidget {
 
   final StreakDiagnostics data;
 
+  String _toClipboardText() {
+    final buf = StringBuffer()
+      ..writeln('Streak-Diagnose')
+      ..writeln('=================')
+      ..writeln('Spieler-ID:             ${data.playerId}')
+      ..writeln('Heute (lokal):          ${_fmtDay(data.now)}')
+      ..writeln('Aktueller Streak:       ${data.currentStreak} Tag(e)')
+      ..writeln('Finalisierte Sessions:  ${data.finishedSessions}')
+      ..writeln('Unfertige Sessions:     ${data.unfinishedSessions}')
+      ..writeln()
+      ..writeln('Distinkte Spieltage (neueste zuerst):');
+    if (data.distinctDays.isEmpty) {
+      buf.writeln('  — keine —');
+    } else {
+      for (final d in data.distinctDays) {
+        buf.writeln('  • ${_fmtDay(d)}');
+      }
+    }
+    return buf.toString();
+  }
+
+  Future<void> _copy(BuildContext context) async {
+    await Clipboard.setData(ClipboardData(text: _toClipboardText()));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Diagnose in Zwischenablage kopiert.')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -177,6 +207,14 @@ class _StreakDiagnosticsView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            onPressed: () => _copy(context),
+            icon: const Icon(Icons.copy, size: 18),
+            label: const Text('Diagnose kopieren'),
+          ),
+        ),
         _row('Spieler-ID', shortId, mono),
         _row('Heute (lokal)', _fmtDay(data.now), mono),
         _row('Aktueller Streak', '${data.currentStreak} Tag(e)', mono),
