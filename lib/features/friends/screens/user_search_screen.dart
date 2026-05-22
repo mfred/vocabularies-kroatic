@@ -47,7 +47,6 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final canSearch = _isValidQuery();
-    final me = ref.watch(myUserProfileProvider).value;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Freund suchen')),
@@ -57,8 +56,6 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (me != null) _MyCodeBanner(profile: me),
-              const SizedBox(height: 12),
               SegmentedButton<UserSearchKind>(
                 segments: const [
                   ButtonSegment(
@@ -126,51 +123,6 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
   String _normalizedQuery() {
     final q = _query.trim().toLowerCase();
     return q;
-  }
-}
-
-class _MyCodeBanner extends StatelessWidget {
-  const _MyCodeBanner({required this.profile});
-
-  final UserProfile profile;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-      decoration: BoxDecoration(
-        color: scheme.primaryContainer.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.qr_code_2, color: scheme.onPrimaryContainer),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Dein Freund-Code — gib ihn deinem Freund weiter',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: scheme.onPrimaryContainer,
-                    )),
-                Text(
-                  profile.friendCode,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    color: scheme.onPrimaryContainer,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 2,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 

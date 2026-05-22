@@ -77,6 +77,23 @@ class SyncStatusScreen extends ConsumerWidget {
     return Scaffold(
       drawer: const _AppDrawer(),
       appBar: AppBar(
+        leading: Consumer(builder: (context, ref, _) {
+          final count =
+              ref.watch(incomingFriendRequestsProvider).value?.length ?? 0;
+          final icon = Builder(
+            builder: (ctx) => IconButton(
+              icon: const Icon(Icons.menu),
+              onPressed: () => Scaffold.of(ctx).openDrawer(),
+              tooltip: 'Menü öffnen',
+            ),
+          );
+          if (count == 0) return icon;
+          return Badge.count(
+            count: count,
+            alignment: const AlignmentDirectional(0.85, 0.15),
+            child: icon,
+          );
+        }),
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
