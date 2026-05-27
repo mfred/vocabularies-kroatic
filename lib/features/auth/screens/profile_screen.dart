@@ -140,6 +140,15 @@ class ProfileScreen extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(16),
                   side: BorderSide(color: scheme.outlineVariant),
                 ),
+                child: const _PlayerStatsTile(),
+              ),
+              const SizedBox(height: 12),
+              Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: scheme.outlineVariant),
+                ),
                 child: _ReminderToggleTile(),
               ),
               const SizedBox(height: 12),
@@ -283,6 +292,114 @@ class _StreakDiagnosticsView extends StatelessWidget {
         children: [
           SizedBox(width: 170, child: Text('$label:', style: mono)),
           Expanded(child: Text(value, style: mono)),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlayerStatsTile extends ConsumerWidget {
+  const _PlayerStatsTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final statsAsync = ref.watch(playerStatsProvider);
+    final longestAsync = ref.watch(longestStreakProvider);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('📊', style: TextStyle(fontSize: 22)),
+              const SizedBox(width: 10),
+              Text(
+                'Deine Stats',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          statsAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 6),
+              child: Text('Lade …'),
+            ),
+            error: (e, _) => Text('Fehler: $e'),
+            data: (s) {
+              final longest = longestAsync.value;
+              return Column(
+                children: [
+                  _StatsRow(
+                    label: 'Quizze gesamt',
+                    value: '${s.totalSessions}',
+                  ),
+                  _StatsRow(
+                    label: 'Diese Woche',
+                    value: '${s.sessionsThisWeek}',
+                  ),
+                  _StatsRow(
+                    label: 'Trefferquote',
+                    value: s.hasAnySession
+                        ? '${s.correctRatioPercent} %'
+                        : '—',
+                  ),
+                  _StatsRow(
+                    label: 'Längster Streak',
+                    value: longest == null
+                        ? '…'
+                        : '$longest Tag${longest == 1 ? '' : 'e'}',
+                  ),
+                  _StatsRow(
+                    label: 'Lieblings-Lektion',
+                    value: s.favouriteLessonTitle == null
+                        ? '—'
+                        : '${s.favouriteLessonTitle} (${s.favouriteLessonSessions})',
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatsRow extends StatelessWidget {
+  const _StatsRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 160,
+            child: Text(
+              label,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
         ],
       ),
     );

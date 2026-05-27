@@ -7,6 +7,19 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Added — Iteration 42 (Persönliche Stats im Profil)
+- **Neuer Stats-Block** im `ProfileScreen` zwischen Streak-Karte und
+  Reminder-Toggle, mit 📊-Header:
+  - Quizze gesamt
+  - Diese Woche (ab Montag 00:00 lokal)
+  - Trefferquote (`SUM(correctCount) / SUM(totalCount)` über alle finalisierten Sessions)
+  - Längster Streak (delegiert an `StreakService.longestStreak`)
+  - Lieblings-Lektion (häufigster `lessonId` ungleich `__daily__`, mit Titel + Session-Count)
+- **`PlayerStatsService`** in `lib/features/auth/services/player_stats_service.dart`
+  führt die Aggregationen in einer Future-Operation aus.
+- **Provider**: `playerStatsProvider` + `longestStreakProvider` (beide
+  autoDispose).
+
 ### Added — Iteration 41 (Fortschritts-% pro Lektion auf dem Home-Screen)
 - **Dünner Fortschrittsbalken + Prozent-Label** unter jedem Lektions-Titel
   in der `_TopicCard`. Berechnung: Anteil der Lektions-Items, die der

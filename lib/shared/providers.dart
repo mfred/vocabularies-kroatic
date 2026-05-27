@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/database/database.dart' hide StreakReward;
 import '../features/auth/services/auth_service.dart';
+import '../features/auth/services/player_stats_service.dart';
 import '../core/network/dio_client.dart';
 import '../core/network/manifest_sync_service.dart';
 import '../core/services/stt_service.dart';
@@ -131,6 +132,21 @@ final reminderServiceProvider = Provider<ReminderService>((ref) {
 final reminderEnabledProvider = FutureProvider.autoDispose<bool>((ref) async {
   final player = await ref.watch(currentPlayerProvider.future);
   return ref.watch(databaseProvider).getReminderEnabled(player.id);
+});
+
+final playerStatsServiceProvider = Provider<PlayerStatsService>((ref) {
+  return PlayerStatsService(ref.watch(databaseProvider));
+});
+
+final playerStatsProvider =
+    FutureProvider.autoDispose<PlayerStats>((ref) async {
+  final player = await ref.watch(currentPlayerProvider.future);
+  return ref.watch(playerStatsServiceProvider).load(player.id);
+});
+
+final longestStreakProvider = FutureProvider.autoDispose<int>((ref) async {
+  final player = await ref.watch(currentPlayerProvider.future);
+  return ref.watch(streakServiceProvider).longestStreak(player.id);
 });
 
 final currentStreakProvider = FutureProvider.autoDispose<int>((ref) async {
