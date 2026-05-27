@@ -16,6 +16,7 @@ import '../features/highscore/services/remote_leaderboard_service.dart';
 import '../features/highscore/services/session_detail_service.dart';
 import '../features/players/player_service.dart';
 import '../features/quiz/models/quiz_direction.dart';
+import '../features/quiz/services/daily_assignment.dart';
 import '../features/quiz/services/daily_quiz_builder.dart';
 import '../features/streaks/models/streak_reward.dart';
 import '../features/streaks/services/reminder_service.dart';
@@ -301,4 +302,15 @@ final dailyChallengeTodayProvider =
     dateKey: dailyDateKey(DateTime.now()),
     playerId: player.id,
   );
+});
+
+/// Tagesauftrag (Mode + Bonus + Item-Pool) für den aktuellen Spieler.
+/// Deterministisch aus (Datum, playerId) abgeleitet — bei wiederholtem
+/// Aufruf am selben Tag identisch.
+final dailyAssignmentProvider =
+    FutureProvider.autoDispose<DailyAssignment?>((ref) async {
+  final player = await ref.watch(currentPlayerProvider.future);
+  final db = ref.watch(databaseProvider);
+  return DailyAssigner(db)
+      .assignFor(date: DateTime.now(), playerId: player.id);
 });

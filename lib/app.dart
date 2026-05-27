@@ -14,7 +14,9 @@ import 'features/highscore/screens/highscore_screen.dart';
 import 'features/lessons/lesson_menu_screen.dart';
 import 'features/quiz/models/quiz_direction.dart';
 import 'features/quiz/models/quiz_format.dart';
+import 'features/quiz/screens/daily_assignment_dialog.dart';
 import 'features/quiz/screens/quiz_screen.dart';
+import 'features/quiz/services/daily_assignment.dart';
 import 'features/quiz/services/daily_quiz_builder.dart';
 import 'features/streaks/models/streak_reward.dart';
 import 'shared/app_info.dart';
@@ -398,6 +400,7 @@ class _DailyChallengeCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final today = ref.watch(dailyChallengeTodayProvider);
+    final assignmentAsync = ref.watch(dailyAssignmentProvider);
     final direction = ref.watch(preferredDirectionProvider);
 
     return today.when(
@@ -405,6 +408,20 @@ class _DailyChallengeCard extends ConsumerWidget {
       error: (_, _) => const SizedBox.shrink(),
       data: (entry) {
         final done = entry != null;
+        final assignment = assignmentAsync.value;
+        final String subtitle;
+        if (done) {
+          subtitle =
+              '${entry.scorePoints} P · ${entry.correctCount}/${entry.totalCount} — morgen wieder';
+        } else if (assignment == null) {
+          subtitle = 'Wird vorbereitet …';
+        } else if (assignment.mode == DailyMode.category &&
+            assignment.categoryLessonTitleDe != null) {
+          subtitle =
+              '${assignment.mode.emoji} Quiz aus ${assignment.categoryLessonTitleDe}';
+        } else {
+          subtitle = '${assignment.mode.emoji} ${assignment.mode.shortLabel}';
+        }
         return Card(
           elevation: 0,
           margin: const EdgeInsets.only(bottom: 8),
@@ -420,13 +437,21 @@ class _DailyChallengeCard extends ConsumerWidget {
           ),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
-            onTap: done
+            onTap: (done || assignment == null)
                 ? null
-                : () {
+                : () async {
+                    final go = await showDailyAssignmentDialog(
+                      context,
+                      assignment: assignment,
+                    );
+                    if (!go || !context.mounted) return;
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => QuizScreen(
-                          lessonId: kDailyLessonId,
+                          lessonId: assignment.mode == DailyMode.category &&
+                                  assignment.categoryLessonId != null
+                              ? assignment.categoryLessonId!
+                              : kDailyLessonId,
                           lessonTitle: 'Quiz des Tages',
                           direction: direction,
                           format: QuizFormat.multipleChoice,
@@ -457,9 +482,7 @@ class _DailyChallengeCard extends ConsumerWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          done
-                              ? '${entry.scorePoints} P · ${entry.correctCount}/${entry.totalCount} — morgen wieder'
-                              : '10 Fragen — gleiche für alle Spieler',
+                          subtitle,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: scheme.onSurfaceVariant,
                           ),

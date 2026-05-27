@@ -13,7 +13,9 @@ import '../models/joker_type.dart';
 import '../models/quiz_direction.dart';
 import '../models/quiz_format.dart';
 import '../models/quiz_question.dart';
+import '../../streaks/services/streak_service.dart' show kMaxStreakSavers;
 import '../services/answer_evaluator.dart';
+import '../services/daily_assignment.dart';
 import '../services/daily_quiz_builder.dart';
 import '../services/quiz_builder.dart';
 
@@ -154,17 +156,35 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
   int _questionStartMs = 0;
   final Uuid _uuid = const Uuid();
 
+  /// Heutiges Daily-Assignment des Spielers — wird in `build()` zwischen-
+  /// gespeichert, damit `_finish()` denselben Bonus anwenden kann (statt
+  /// erneut zu würfeln).
+  DailyAssignment? _assignment;
+
   @override
   Future<QuizSessionState> build() async {
     ref.onDispose(() => _ticker?.cancel());
     final db = ref.read(databaseProvider);
     final player = await ref.read(currentPlayerProvider.future);
     final List<QuizQuestion> questions;
+    String sessionLessonId = _args.lessonId;
     if (_args.dailyMode) {
-      questions = await DailyQuizBuilder(db).build(
-        date: DateTime.now(),
-        direction: _args.direction,
-      );
+      _assignment = await DailyAssigner(db)
+          .assignFor(date: DateTime.now(), playerId: player.id);
+      if (_assignment == null) {
+        questions = const [];
+      } else {
+        questions = await DailyQuizBuilder(db).build(
+          date: DateTime.now(),
+          direction: _args.direction,
+          playerId: player.id,
+          assignment: _assignment!,
+        );
+        if (_assignment!.mode == DailyMode.category &&
+            _assignment!.categoryLessonId != null) {
+          sessionLessonId = _assignment!.categoryLessonId!;
+        }
+      }
     } else {
       final builder = QuizBuilder(db);
       final reviewPool = _args.reviewMode
@@ -186,7 +206,7 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
       QuizSessionsCompanion.insert(
         id: sessionId,
         playerId: player.id,
-        lessonId: _args.lessonId,
+        lessonId: sessionLessonId,
         mode: Value(_args.sessionMode),
         direction: Value(_args.direction.code),
         startedAt: now,
@@ -311,7 +331,14 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
     final player = await ref.read(currentPlayerProvider.future);
     final pendingBonus = await db.getPendingBonusPoints(player.id);
     final doubled = await db.consumeDoublePoints(player.id);
-    final finalScore = (baseScore + pendingBonus) * (doubled ? 2 : 1);
+    final dailyFlatBonus = (_args.dailyMode && _assignment?.bonus == DailyBonus.flat30)
+        ? 30
+        : 0;
+    int finalScore =
+        (baseScore + pendingBonus + dailyFlatBonus) * (doubled ? 2 : 1);
+    if (_args.dailyMode && _assignment?.bonus == DailyBonus.multiplier15) {
+      finalScore = (finalScore * 3) ~/ 2;
+    }
     await db.finalizeQuizSession(
       sessionId: current.sessionId,
       finishedAt: now,
@@ -336,7 +363,24 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
           totalCount: Value(current.questions.length),
         ),
       );
+      // Bonus außerhalb der Score-Rechnung (Saver / Doppel-Punkte) anwenden.
+      switch (_assignment?.bonus) {
+        case DailyBonus.doubleNext:
+          await db.grantDoublePoints(player.id);
+          ref.invalidate(doublePointsActiveProvider);
+          break;
+        case DailyBonus.streakSaver:
+          await db.incrementStreakSavers(player.id, cap: kMaxStreakSavers);
+          ref.invalidate(streakSaversProvider);
+          break;
+        case DailyBonus.flat30:
+        case DailyBonus.multiplier15:
+        case null:
+          // bereits in finalScore eingerechnet.
+          break;
+      }
       ref.invalidate(dailyChallengeTodayProvider);
+      ref.invalidate(dailyAssignmentProvider);
     }
     // Reminder neu planen (oder stornieren): heutige Session zählt jetzt.
     // Permission idempotent anfragen — der OS-Dialog kommt nur das erste

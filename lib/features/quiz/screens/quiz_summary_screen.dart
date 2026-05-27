@@ -163,12 +163,11 @@ class _BigStat extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Expanded(
-            child: Text(
-              label,
-              style: theme.textTheme.titleMedium,
-            ),
+          Text(
+            label,
+            style: theme.textTheme.titleMedium,
           ),
+          const SizedBox(width: 24),
           Text(
             value,
             style: (emphasize

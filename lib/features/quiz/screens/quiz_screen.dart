@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/speak_button.dart';
 import '../../../shared/providers.dart';
+import '../../../shared/widgets/tablet_constrained.dart';
 import '../controllers/quiz_session_controller.dart';
 import '../models/joker_type.dart';
 import '../models/quiz_direction.dart';
@@ -170,7 +171,8 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
         ],
       ),
       body: SafeArea(
-        child: Padding(
+        child: TabletConstrained(
+          child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -254,6 +256,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
               ],
             ],
           ),
+        ),
         ),
       ),
     );

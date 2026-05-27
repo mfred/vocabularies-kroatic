@@ -3,17 +3,17 @@ import 'dart:math';
 import '../../../core/database/database.dart';
 import '../models/quiz_direction.dart';
 import '../models/quiz_question.dart';
-import 'quiz_builder.dart' show kQuizQuestionCount, kQuizOptionsPerQuestion;
+import 'daily_assignment.dart';
+import 'quiz_builder.dart' show kQuizOptionsPerQuestion, QuizBuilder;
 
 const String kDailyLessonId = '__daily__';
 
 int dailyDateKey(DateTime date) =>
     date.year * 10000 + date.month * 100 + date.day;
 
-/// Baut 10 Quiz-Fragen für die „Quiz des Tages"-Karte. Seed = Datumsschlüssel
-/// → alle Spieler bekommen am selben Tag dieselben Items, unabhängig von der
-/// gewählten Richtung. Distractoren werden ebenfalls deterministisch aus
-/// dem Gesamt-Pool gezogen.
+/// Baut die Fragen fürs Quiz des Tages. Ab Iter 43 ist das Quiz **pro
+/// Spieler** unterschiedlich — der Assignment-Service würfelt Mode + Bonus
+/// für den Tag, und dieser Builder spielt den passenden Item-Pool.
 class DailyQuizBuilder {
   DailyQuizBuilder(this._db);
 
@@ -22,22 +22,45 @@ class DailyQuizBuilder {
   Future<List<QuizQuestion>> build({
     required DateTime date,
     required QuizDirection direction,
+    required String playerId,
+    required DailyAssignment assignment,
   }) async {
-    final all = await _db.allItems();
-    if (all.length < kQuizOptionsPerQuestion) return const [];
-
-    final seed = dailyDateKey(date);
+    final seed = dailyDateKey(date) * 1000 + (playerId.hashCode & 0x3FF);
     final rng = Random(seed);
-    final shuffled = [...all]..shuffle(rng);
-    final picked = shuffled.take(kQuizQuestionCount).toList();
 
-    return picked.map((item) {
+    switch (assignment.mode) {
+      case DailyMode.category:
+        return QuizBuilder(_db, random: rng).build(
+          lessonId: assignment.categoryLessonId!,
+          playerId: playerId,
+          direction: direction,
+        );
+
+      case DailyMode.newWords:
+      case DailyMode.mistakes:
+        final all = await _db.allItems();
+        return _buildFromPool(
+          pool: assignment.itemPool,
+          allItems: all,
+          direction: direction,
+          rng: rng,
+        );
+    }
+  }
+
+  List<QuizQuestion> _buildFromPool({
+    required List<Item> pool,
+    required List<Item> allItems,
+    required QuizDirection direction,
+    required Random rng,
+  }) {
+    return pool.map((item) {
       final correct = _answerFor(item, direction);
+      final candidates = [
+        ...allItems.where((i) => i.id != item.id),
+      ]..shuffle(rng);
       final distractors = <String>{};
-      // Eigene Shuffle-Instanz pro Frage, damit Distractor-Picks reproducierbar
-      // sind und nicht von der äußeren Reihenfolge abhängen.
-      final pool = [...all.where((i) => i.id != item.id)]..shuffle(rng);
-      for (final c in pool) {
+      for (final c in candidates) {
         final ans = _answerFor(c, direction);
         if (ans == correct || distractors.contains(ans)) continue;
         distractors.add(ans);

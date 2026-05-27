@@ -7,6 +7,50 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Changed — Iteration 43 (Tablet-Polish + Quiz-des-Tages-Rework)
+
+#### Tablet/Landscape
+- **`QuizScreen`-Body** in `TabletConstrained` umhüllt — auf Tablets im
+  Querformat passen jetzt alle 4 MC-Optionen ohne Scrollen, weil die
+  Buttons nicht mehr in die volle Bildschirmbreite gezogen werden.
+- **Summary-Tiles `_BigStat`**: statt `Expanded(label) + value` jetzt
+  `label + SizedBox(24) + value` — Label und Wert stehen kompakt links
+  beieinander, kein Reißverschluss-Layout mehr auf breiten Screens.
+
+#### Quiz des Tages — Rework
+- **Weg von „alle bekommen dieselben Items"**: deckte die unterschiedlichen
+  Wissensstände nicht ab. Stattdessen würfelt jeder Spieler täglich
+  (deterministisch aus Datum + playerId) einen von drei **Modi** und
+  einen von vier **Boni**.
+- **Modi**:
+  - 🆕 5 neue Vokabeln (noch nie gesehen, aus allen Lektionen)
+  - 🛠️ Deine Fehler (zuletzt falsche Items aus allen Lektionen)
+  - 🎯 Quiz einer zufälligen Kategorie (≥ 12 Items)
+  - Fallback: wenn newWords/mistakes-Pool zu klein, automatisch Category.
+- **Boni**:
+  - +30 Bonuspunkte (Flat)
+  - Nächstes reguläres Quiz zählt ×2 (`grantDoublePoints`)
+  - +1 Streak-Schoner ins Reservoir (`incrementStreakSavers`, Cap 3)
+  - Tages-Score ×1.5
+- **Popup vor dem Quiz** (`daily_assignment_dialog.dart`): zeigt klar
+  Mode + Bonus mit Erklärungen. „Los geht's" startet, „Später" schließt.
+- **Karte-Subtitle** zeigt den heutigen Mode kompakt:
+  „🆕 5 neue Vokabeln" / „🛠️ Deine Fehler" / „🎯 Quiz aus 'Familie'".
+- **Neue Komponenten**: `daily_assignment.dart` (`DailyAssigner` +
+  `DailyAssignment` + Display-Extensions), `daily_assignment_dialog.dart`,
+  `dailyAssignmentProvider` in `providers.dart`.
+- **`DailyQuizBuilder` umgebaut**: nimmt `DailyAssignment`-Pool und
+  Player-ID entgegen; für Category-Modus delegiert er an `QuizBuilder`
+  mit seeded Random.
+- **`QuizSessionController`**:
+  - speichert `_assignment` beim Build, wendet im `_finish` den passenden
+    Bonus an
+  - `lessonId` der Session = echte Kategorie bei Category-Modus, sonst
+    `__daily__`-Sentinel
+- **Tests**: `daily_quiz_builder_test.dart` überarbeitet — testet
+  Determinismus pro `(Datum, Spieler)`, Unterschied zwischen Spielern,
+  und 5-Frage-Build aus newWords-Pool.
+
 ### Added — Iteration 42 (Persönliche Stats im Profil)
 - **Neuer Stats-Block** im `ProfileScreen` zwischen Streak-Karte und
   Reminder-Toggle, mit 📊-Header:
