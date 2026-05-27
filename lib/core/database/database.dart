@@ -241,6 +241,40 @@ class AppDatabase extends _$AppDatabase {
         .get();
   }
 
+  /// Anteil [0.0, 1.0] der Items pro Lektion, die der Spieler mindestens
+  /// einmal richtig beantwortet hat. Lektionen ohne Items fehlen in der Map.
+  /// Direction-unabhängig — beide Richtungen zählen in denselben Pool.
+  Stream<Map<String, double>> watchLessonProgress(String playerId) {
+    final query = customSelect(
+      '''
+SELECT items.lesson_id AS lesson_id,
+       COUNT(DISTINCT items.id) AS total,
+       COUNT(DISTINCT CASE WHEN correct_attempts.item_id IS NOT NULL
+                           THEN items.id END) AS correct
+FROM items
+LEFT JOIN (
+  SELECT DISTINCT qa.item_id
+  FROM quiz_attempts qa
+  INNER JOIN quiz_sessions qs ON qs.id = qa.session_id
+  WHERE qs.player_id = ?1 AND qa.was_correct = 1
+) AS correct_attempts ON correct_attempts.item_id = items.id
+GROUP BY items.lesson_id
+''',
+      variables: [Variable.withString(playerId)],
+      readsFrom: {items, quizAttempts, quizSessions},
+    );
+    return query.watch().map((rows) {
+      final out = <String, double>{};
+      for (final r in rows) {
+        final lessonId = r.read<String>('lesson_id');
+        final total = r.read<int>('total');
+        final correct = r.read<int>('correct');
+        out[lessonId] = total == 0 ? 0.0 : correct / total;
+      }
+      return out;
+    });
+  }
+
   Future<DailyChallenge?> getDailyChallenge({
     required int dateKey,
     required String playerId,

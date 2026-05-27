@@ -493,6 +493,10 @@ class _TopicCard extends ConsumerWidget {
               duels.where((d) => d.lessonId == lesson.lessonId).length,
           orElse: () => 0,
         );
+    final progress = ref.watch(lessonProgressProvider).maybeWhen(
+          data: (m) => m[lesson.lessonId] ?? 0.0,
+          orElse: () => 0.0,
+        );
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 12),
@@ -520,11 +524,39 @@ class _TopicCard extends ConsumerWidget {
               Icon(icon, size: 44, color: theme.colorScheme.primary),
               const SizedBox(width: 20),
               Expanded(
-                child: Text(
-                  lesson.titleDe,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      lesson.titleDe,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(3),
+                            child: LinearProgressIndicator(
+                              value: progress,
+                              minHeight: 4,
+                              backgroundColor: theme
+                                  .colorScheme.surfaceContainerHighest,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${(progress * 100).round()} %',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
               if (incomingCount > 0)

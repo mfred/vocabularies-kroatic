@@ -7,6 +7,17 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Added — Iteration 41 (Fortschritts-% pro Lektion auf dem Home-Screen)
+- **Dünner Fortschrittsbalken + Prozent-Label** unter jedem Lektions-Titel
+  in der `_TopicCard`. Berechnung: Anteil der Lektions-Items, die der
+  aktuelle Spieler mindestens einmal richtig beantwortet hat
+  (richtungs-unabhängig).
+- **Reaktiv via Drift `watch`**: `watchLessonProgress(playerId)` liefert
+  Stream über `items` ⨯ `quiz_attempts` ⨯ `quiz_sessions`. Updates kommen
+  automatisch, sobald eine neue richtige Antwort gespeichert wurde.
+- **`lessonProgressProvider`** (autoDispose StreamProvider) in
+  `shared/providers.dart`.
+
 ### Added — Iteration 40 (Streak-Erinnerung am Abend)
 - **Lokale Notification** um 20 Uhr lokaler Zeit, wenn (a) `currentStreak ≥ 3`,
   (b) heute noch keine Session abgeschlossen wurde und (c) der Toggle im

@@ -70,6 +70,15 @@ final lessonItemsProvider =
   return ref.watch(databaseProvider).itemsForLesson(lessonId);
 });
 
+/// Anteil korrekt beantworteter Items pro Lektion für den aktuellen Spieler
+/// (0.0–1.0). Reaktiv per Drift `watch` — aktualisiert sich automatisch nach
+/// jeder neuen Antwort.
+final lessonProgressProvider =
+    StreamProvider.autoDispose<Map<String, double>>((ref) async* {
+  final player = await ref.watch(currentPlayerProvider.future);
+  yield* ref.watch(databaseProvider).watchLessonProgress(player.id);
+});
+
 /// Anzahl der Items, bei denen der aktuelle Spieler zuletzt falsch
 /// geantwortet hat — Grundlage für die „Fehler ausbessern"-Karte.
 final wrongItemsCountProvider =
