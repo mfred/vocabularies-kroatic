@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/providers.dart';
+import '../../../shared/widgets/tablet_constrained.dart';
 import '../services/auth_service.dart';
 import 'verify_email_screen.dart';
 
@@ -111,7 +112,8 @@ class _SignInFormState extends ConsumerState<_SignInForm> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
+    return TabletConstrained(
+      child: SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Form(
         key: _formKey,
@@ -170,6 +172,7 @@ class _SignInFormState extends ConsumerState<_SignInForm> {
             ],
           ],
         ),
+      ),
       ),
     );
   }
@@ -230,7 +233,8 @@ class _SignUpFormState extends ConsumerState<_SignUpForm> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
+    return TabletConstrained(
+      child: SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Form(
         key: _formKey,
@@ -295,6 +299,7 @@ class _SignUpFormState extends ConsumerState<_SignUpForm> {
             ],
           ],
         ),
+      ),
       ),
     );
   }

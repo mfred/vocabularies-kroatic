@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/providers.dart';
+import '../../../shared/widgets/tablet_constrained.dart';
 import '../models/session_detail.dart';
 import '../widgets/attempt_row.dart';
 
@@ -17,20 +18,22 @@ class SessionDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Spiel-Detail'),
       ),
-      body: async.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text('Fehler: $e', textAlign: TextAlign.center),
+      body: TabletConstrained(
+        child: async.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text('Fehler: $e', textAlign: TextAlign.center),
+            ),
           ),
+          data: (detail) {
+            if (detail == null) {
+              return const Center(child: Text('Spiel nicht gefunden.'));
+            }
+            return _SessionContent(detail: detail);
+          },
         ),
-        data: (detail) {
-          if (detail == null) {
-            return const Center(child: Text('Spiel nicht gefunden.'));
-          }
-          return _SessionContent(detail: detail);
-        },
       ),
     );
   }

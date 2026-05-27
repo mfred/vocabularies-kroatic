@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/database/database.dart';
 import '../../core/widgets/speak_button.dart';
 import '../../shared/providers.dart';
+import '../../shared/widgets/tablet_constrained.dart';
 
 class VocabularyListScreen extends ConsumerStatefulWidget {
   const VocabularyListScreen({super.key, required this.lesson});
@@ -39,7 +40,8 @@ class _VocabularyListScreenState extends ConsumerState<VocabularyListScreen> {
           ],
         ),
       ),
-      body: Column(
+      body: TabletConstrained(
+        child: Column(
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
@@ -104,6 +106,7 @@ class _VocabularyListScreenState extends ConsumerState<VocabularyListScreen> {
             ),
           ),
         ],
+        ),
       ),
     );
   }

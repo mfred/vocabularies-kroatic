@@ -22,6 +22,7 @@ import 'features/streaks/models/streak_reward.dart';
 import 'shared/app_info.dart';
 import 'shared/firebase_status.dart';
 import 'shared/providers.dart';
+import 'shared/widgets/tablet_constrained.dart';
 
 const Map<String, IconData> _topicIcons = {
   'greetings': Icons.waving_hand,
@@ -119,16 +120,18 @@ class SyncStatusScreen extends ConsumerWidget {
         ),
         bottom: streak > 0 ? _StreakBanner(streak: streak) : null,
       ),
-      body: lessonsAsync.when(
-        loading: () => const _LoadingView(),
-        error: (err, _) => _ErrorView(
-          error: err.toString(),
-          onRetry: () => ref.invalidate(syncResultProvider),
+      body: TabletConstrained(
+        child: lessonsAsync.when(
+          loading: () => const _LoadingView(),
+          error: (err, _) => _ErrorView(
+            error: err.toString(),
+            onRetry: () => ref.invalidate(syncResultProvider),
+          ),
+          data: (lessons) {
+            final result = syncAsync.value;
+            return _LessonOverview(lessons: lessons, syncResult: result);
+          },
         ),
-        data: (lessons) {
-          final result = syncAsync.value;
-          return _LessonOverview(lessons: lessons, syncResult: result);
-        },
       ),
     );
   }

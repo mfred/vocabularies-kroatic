@@ -7,6 +7,26 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Changed — Iteration 44 (TabletConstrained auf alle Screens ausgeweitet)
+- Nach dem Live-Test von Iter 43 zeigte sich, dass nur die Quiz-Screens
+  zentriert waren — viele weitere Top-Level-Screens streckten ihre
+  Inhalte weiterhin über die volle Tablet-Breite.
+- **`TabletConstrained`-Wrap** nachgezogen in:
+  - `LessonMenuScreen` (Action-Karten „Quiz / Vokabeln / Fehler / Duell")
+  - `VocabularyListScreen` (Item-Liste)
+  - `SessionDetailScreen` (Versuchs-Liste)
+  - `ProfileScreen` (Profil-Karten)
+  - `LoginScreen` — pro Tab (`_SignInForm`, `_SignUpForm`), nicht außen,
+    damit die TabBar oben über die volle Breite bleibt
+  - `UserSearchScreen` (Suche + Ergebnisse)
+  - `DuelPlayScreen` mit `kTabletMaxBoardWidth` (720 px statt 640) —
+    Drag&Drop-Board braucht etwas mehr Platz
+  - Home (`SyncStatusScreen` → CustomScrollView mit Lesson-Karten)
+- Bereits korrekt waren `HighscoreScreen`, `VerifyEmailScreen`,
+  `FriendsScreen`, `DuelSummaryScreen`, `DuelResultCompareScreen`.
+- Phones (< 640 px Breite) sehen keinen Unterschied — `TabletConstrained`
+  ist No-Op unterhalb der maxWidth-Schwelle.
+
 ### Changed — Iteration 43 (Tablet-Polish + Quiz-des-Tages-Rework)
 
 #### Tablet/Landscape

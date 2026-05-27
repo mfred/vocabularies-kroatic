@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/providers.dart';
+import '../../../shared/widgets/tablet_constrained.dart';
 import '../../../shared/widgets/user_avatar.dart';
 import '../../friends/friends_providers.dart';
 import 'avatar_picker_sheet.dart';
@@ -32,7 +33,8 @@ class ProfileScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Mein Profil')),
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: TabletConstrained(
+          child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -199,6 +201,7 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

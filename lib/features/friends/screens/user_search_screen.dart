@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/widgets/tablet_constrained.dart';
 import '../../../shared/widgets/user_avatar.dart';
 import '../friends_providers.dart';
 import '../models/user_profile.dart';
@@ -52,7 +53,8 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Freund suchen')),
       body: SafeArea(
-        child: Padding(
+        child: TabletConstrained(
+          child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -106,6 +108,7 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

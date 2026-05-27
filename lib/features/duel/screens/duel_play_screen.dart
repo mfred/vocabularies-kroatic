@@ -212,7 +212,9 @@ class _DuelPlayScreenState extends ConsumerState<DuelPlayScreen> {
           ],
         ),
         body: SafeArea(
-          child: Stack(
+          child: TabletConstrained(
+            maxWidth: kTabletMaxBoardWidth,
+            child: Stack(
             children: [
               Column(
                 children: [
@@ -234,6 +236,7 @@ class _DuelPlayScreenState extends ConsumerState<DuelPlayScreen> {
                   ),
                 ),
             ],
+          ),
           ),
         ),
       ),

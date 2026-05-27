@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/database/database.dart';
 import '../../shared/providers.dart';
+import '../../shared/widgets/tablet_constrained.dart';
 import '../duel/duel_launcher.dart';
 import '../duel/duel_providers.dart';
 import '../duel/services/duel_set_builder.dart';
@@ -64,7 +65,8 @@ class LessonMenuScreen extends ConsumerWidget {
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: TabletConstrained(
+          child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -151,6 +153,7 @@ class LessonMenuScreen extends ConsumerWidget {
               ),
             ],
           ),
+        ),
         ),
       ),
     );
