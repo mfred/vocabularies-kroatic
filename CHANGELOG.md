@@ -7,6 +7,29 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Added — Iteration 40 (Streak-Erinnerung am Abend)
+- **Lokale Notification** um 20 Uhr lokaler Zeit, wenn (a) `currentStreak ≥ 3`,
+  (b) heute noch keine Session abgeschlossen wurde und (c) der Toggle im
+  Profil-Screen aktiv ist (Default: an). Text: „Streak retten 🔥 — Du hast
+  einen Streak von N Tagen — ein Quiz reicht, damit er bleibt."
+- **Re-Schedule-Trigger**: nach jedem Kalt-Start in `main.dart` (best-effort,
+  eigene DB-Instanz) und nach jedem `QuizSession._finish` — heutige Session
+  storniert die Notification.
+- **OS-Permission** wird beim ersten Quiz-Abschluss idempotent angefragt
+  (`requestNotificationsPermission`), nicht beim ersten App-Start — wirkt
+  weniger aufdringlich.
+- **Toggle im Profil-Screen** zwischen Streak-Status und Diagnose-Block.
+  Aus = Notification storniert, ein = neu geplant.
+- **Drift-Migration v7 → v8**: neue Spalte `players.reminder_enabled`
+  (Default `true`).
+- **Android**: `POST_NOTIFICATIONS`, `SCHEDULE_EXACT_ALARM`,
+  `USE_EXACT_ALARM`, `RECEIVE_BOOT_COMPLETED` im Manifest; Boot-Receiver
+  von `flutter_local_notifications` eingebunden, damit geplante Reminder
+  einen Reboot überleben. `coreLibraryDesugaringEnabled = true` in
+  `build.gradle.kts` für `java.time` auf älteren Android-Versionen.
+- **Neue Deps**: `flutter_local_notifications ^18.0.1`, `timezone ^0.10.0`,
+  `flutter_timezone ^4.1.0`.
+
 ### Added — Iteration 39 (Quiz des Tages)
 - **Tägliche Challenge** auf dem Home-Screen direkt über den Lektions-Karten:
   10 Multiple-Choice-Fragen aus dem Gesamt-Pool (alle Lektionen), Seed =

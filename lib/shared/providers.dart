@@ -17,6 +17,7 @@ import '../features/players/player_service.dart';
 import '../features/quiz/models/quiz_direction.dart';
 import '../features/quiz/services/daily_quiz_builder.dart';
 import '../features/streaks/models/streak_reward.dart';
+import '../features/streaks/services/reminder_service.dart';
 import '../features/streaks/services/streak_service.dart';
 
 class PreferredDirection extends Notifier<QuizDirection> {
@@ -109,6 +110,18 @@ final sessionDetailServiceProvider = Provider<SessionDetailService>((ref) {
 
 final streakServiceProvider = Provider<StreakService>((ref) {
   return StreakService(ref.watch(databaseProvider));
+});
+
+final reminderServiceProvider = Provider<ReminderService>((ref) {
+  return ReminderService(
+    ref.watch(databaseProvider),
+    ref.watch(streakServiceProvider),
+  );
+});
+
+final reminderEnabledProvider = FutureProvider.autoDispose<bool>((ref) async {
+  final player = await ref.watch(currentPlayerProvider.future);
+  return ref.watch(databaseProvider).getReminderEnabled(player.id);
 });
 
 final currentStreakProvider = FutureProvider.autoDispose<int>((ref) async {

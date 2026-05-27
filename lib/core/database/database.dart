@@ -60,6 +60,8 @@ class Players extends Table {
       integer().withDefault(const Constant(0))();
   IntColumn get doublePointsRemaining =>
       integer().withDefault(const Constant(0))();
+  BoolColumn get reminderEnabled =>
+      boolean().withDefault(const Constant(true))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -136,7 +138,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -178,6 +180,9 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 7) {
             await m.createTable(dailyChallenges);
+          }
+          if (from < 8) {
+            await m.addColumn(players, players.reminderEnabled);
           }
         },
       );
@@ -248,6 +253,17 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> insertDailyChallenge(DailyChallengesCompanion entry) {
     return into(dailyChallenges).insert(entry);
+  }
+
+  Future<bool> getReminderEnabled(String playerId) async {
+    final row = await (select(players)..where((t) => t.id.equals(playerId)))
+        .getSingleOrNull();
+    return row?.reminderEnabled ?? true;
+  }
+
+  Future<void> setReminderEnabled(String playerId, bool enabled) async {
+    await (update(players)..where((t) => t.id.equals(playerId)))
+        .write(PlayersCompanion(reminderEnabled: Value(enabled)));
   }
 
   Future<Player?> getAnyLocalPlayer() {

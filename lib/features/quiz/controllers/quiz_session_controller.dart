@@ -338,6 +338,12 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
       );
       ref.invalidate(dailyChallengeTodayProvider);
     }
+    // Reminder neu planen (oder stornieren): heutige Session zählt jetzt.
+    // Permission idempotent anfragen — der OS-Dialog kommt nur das erste
+    // Mal nach Quiz-Abschluss, nicht beim Kaltstart.
+    final reminder = ref.read(reminderServiceProvider);
+    unawaited(reminder.requestPermissionIfNeeded());
+    unawaited(reminder.rescheduleReminder(player.id));
     state = AsyncData(current.copyWith(
       isFinished: true,
       elapsedSeconds: durationSeconds,

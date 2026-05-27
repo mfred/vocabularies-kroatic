@@ -140,6 +140,15 @@ class ProfileScreen extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(16),
                   side: BorderSide(color: scheme.outlineVariant),
                 ),
+                child: _ReminderToggleTile(),
+              ),
+              const SizedBox(height: 12),
+              Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: scheme.outlineVariant),
+                ),
                 child: ExpansionTile(
                   leading: const Icon(Icons.bug_report_outlined),
                   title: const Text('Streak-Diagnose'),
@@ -276,6 +285,33 @@ class _StreakDiagnosticsView extends StatelessWidget {
           Expanded(child: Text(value, style: mono)),
         ],
       ),
+    );
+  }
+}
+
+class _ReminderToggleTile extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final enabledAsync = ref.watch(reminderEnabledProvider);
+    final enabled = enabledAsync.maybeWhen(data: (v) => v, orElse: () => true);
+    return SwitchListTile(
+      secondary: const Icon(Icons.notifications_outlined),
+      title: const Text('Streak-Erinnerung am Abend'),
+      subtitle: const Text(
+        '20 Uhr, nur bei Streak ab 3 Tagen und wenn heute nicht gespielt.',
+      ),
+      value: enabled,
+      onChanged: (v) async {
+        final player = await ref.read(currentPlayerProvider.future);
+        await ref.read(databaseProvider).setReminderEnabled(player.id, v);
+        ref.invalidate(reminderEnabledProvider);
+        if (v) {
+          await ref.read(reminderServiceProvider).requestPermissionIfNeeded();
+          await ref.read(reminderServiceProvider).rescheduleReminder(player.id);
+        } else {
+          await ref.read(reminderServiceProvider).cancel();
+        }
+      },
     );
   }
 }
