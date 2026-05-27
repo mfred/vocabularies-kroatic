@@ -13,6 +13,9 @@ import 'features/friends/screens/friends_screen.dart';
 import 'features/highscore/screens/highscore_screen.dart';
 import 'features/lessons/lesson_menu_screen.dart';
 import 'features/quiz/models/quiz_direction.dart';
+import 'features/quiz/models/quiz_format.dart';
+import 'features/quiz/screens/quiz_screen.dart';
+import 'features/quiz/services/daily_quiz_builder.dart';
 import 'features/streaks/models/streak_reward.dart';
 import 'shared/app_info.dart';
 import 'shared/firebase_status.dart';
@@ -212,7 +215,11 @@ class _LessonOverview extends ConsumerWidget {
               hasScrollBody: false,
               child: _EmptyState(syncResult: syncResult),
             )
-          else
+          else ...[
+            const SliverPadding(
+              padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+              sliver: SliverToBoxAdapter(child: _DailyChallengeCard()),
+            ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               sliver: SliverList.builder(
@@ -221,6 +228,7 @@ class _LessonOverview extends ConsumerWidget {
                     _TopicCard(lesson: lessons[index]),
               ),
             ),
+          ],
           const SliverToBoxAdapter(child: SizedBox(height: 24)),
         ],
       ),
@@ -378,6 +386,95 @@ class _SyncBannerState extends State<_SyncBanner> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _DailyChallengeCard extends ConsumerWidget {
+  const _DailyChallengeCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final today = ref.watch(dailyChallengeTodayProvider);
+    final direction = ref.watch(preferredDirectionProvider);
+
+    return today.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (entry) {
+        final done = entry != null;
+        return Card(
+          elevation: 0,
+          margin: const EdgeInsets.only(bottom: 8),
+          color: done
+              ? scheme.surfaceContainerHighest
+              : scheme.tertiaryContainer.withValues(alpha: 0.6),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+              width: 1.5,
+              color: done ? scheme.outlineVariant : scheme.tertiary,
+            ),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: done
+                ? null
+                : () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => QuizScreen(
+                          lessonId: kDailyLessonId,
+                          lessonTitle: 'Quiz des Tages',
+                          direction: direction,
+                          format: QuizFormat.multipleChoice,
+                          dailyMode: true,
+                        ),
+                      ),
+                    );
+                  },
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+              child: Row(
+                children: [
+                  Text(
+                    done ? '✅' : '⭐',
+                    style: const TextStyle(fontSize: 32),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Quiz des Tages',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          done
+                              ? '${entry.scorePoints} P · ${entry.correctCount}/${entry.totalCount} — morgen wieder'
+                              : '10 Fragen — gleiche für alle Spieler',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (!done)
+                    Icon(Icons.play_arrow, color: scheme.tertiary, size: 28),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

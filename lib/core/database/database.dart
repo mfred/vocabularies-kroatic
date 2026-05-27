@@ -109,6 +109,19 @@ class QuizAttempts extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+class DailyChallenges extends Table {
+  IntColumn get dateKey => integer()();
+  TextColumn get playerId => text().references(Players, #id)();
+  TextColumn get sessionId => text()();
+  IntColumn get completedAt => integer()();
+  IntColumn get scorePoints => integer().withDefault(const Constant(0))();
+  IntColumn get correctCount => integer().withDefault(const Constant(0))();
+  IntColumn get totalCount => integer().withDefault(const Constant(0))();
+
+  @override
+  Set<Column> get primaryKey => {dateKey, playerId};
+}
+
 @DriftDatabase(tables: [
   Items,
   LessonsCache,
@@ -116,12 +129,14 @@ class QuizAttempts extends Table {
   QuizSessions,
   QuizAttempts,
   StreakRewards,
+  DailyChallenges,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
+  AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -160,6 +175,9 @@ class AppDatabase extends _$AppDatabase {
               'UPDATE players SET pending_bonus_points = 0',
             );
             await customStatement('DELETE FROM streak_rewards');
+          }
+          if (from < 7) {
+            await m.createTable(dailyChallenges);
           }
         },
       );
@@ -210,6 +228,26 @@ class AppDatabase extends _$AppDatabase {
             (t) => OrderingTerm(expression: t.id),
           ]))
         .get();
+  }
+
+  Future<List<Item>> allItems() {
+    return (select(items)
+          ..orderBy([(t) => OrderingTerm(expression: t.id)]))
+        .get();
+  }
+
+  Future<DailyChallenge?> getDailyChallenge({
+    required int dateKey,
+    required String playerId,
+  }) {
+    return (select(dailyChallenges)
+          ..where(
+              (t) => t.dateKey.equals(dateKey) & t.playerId.equals(playerId)))
+        .getSingleOrNull();
+  }
+
+  Future<void> insertDailyChallenge(DailyChallengesCompanion entry) {
+    return into(dailyChallenges).insert(entry);
   }
 
   Future<Player?> getAnyLocalPlayer() {

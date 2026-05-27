@@ -7,6 +7,28 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Added — Iteration 39 (Quiz des Tages)
+- **Tägliche Challenge** auf dem Home-Screen direkt über den Lektions-Karten:
+  10 Multiple-Choice-Fragen aus dem Gesamt-Pool (alle Lektionen), Seed =
+  heutiger Datumsschlüssel `YYYYMMDD`. Alle Spieler bekommen am selben Tag
+  dieselben Items und Distractoren — direkter Vergleich auf der globalen
+  Bestenliste.
+- **Genau ein Versuch pro Tag, pro Spieler**: neue Drift-Tabelle
+  `daily_challenges` (Migration v6 → v7) speichert Score + Counts pro
+  `(date_key, player_id)`. Nach Abschluss zeigt die Karte das Ergebnis und
+  ist bis Mitternacht gesperrt.
+- **Neue Komponenten**: `lib/features/quiz/services/daily_quiz_builder.dart`,
+  `_DailyChallengeCard` in `lib/app.dart`, `dailyChallengeTodayProvider` in
+  `shared/providers.dart`. `QuizSessionArgs` bekommt eine `dailyMode`-Flag,
+  `QuizScreen` reicht sie durch, `QuizSessionController` wählt darauf den
+  Daily-Builder + speichert nach `_finish` die `DailyChallenge`-Zeile.
+- **Tests**: `daily_quiz_builder_test.dart` deckt Determinismus pro Datum,
+  Unterschied zwischen zwei Tagen und Datumsschlüssel-Kodierung ab.
+- **Sentinel-Lesson-ID** `__daily__` für Daily-Sessions — taucht in der
+  Bestenliste als normale Punktebeitrag des Spielers auf; Detail-Joins auf
+  `lessons_cache` ergeben leer und werden vom existierenden left-outer-Join
+  toleriert.
+
 ### Changed — Iteration 38 (Joker-Wertigkeiten an Skala x20 angeglichen)
 - **Joker-Kosten** in `JokerType` deutlich angehoben, damit Joker bei der
   seit Iteration 21 geltenden Score-Skala (Max ~80 P pro Quiz) wieder eine

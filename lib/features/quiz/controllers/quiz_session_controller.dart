@@ -14,6 +14,7 @@ import '../models/quiz_direction.dart';
 import '../models/quiz_format.dart';
 import '../models/quiz_question.dart';
 import '../services/answer_evaluator.dart';
+import '../services/daily_quiz_builder.dart';
 import '../services/quiz_builder.dart';
 
 class QuizSessionArgs {
@@ -22,6 +23,7 @@ class QuizSessionArgs {
     required this.direction,
     required this.format,
     this.reviewMode = false,
+    this.dailyMode = false,
   });
 
   final String lessonId;
@@ -32,7 +34,14 @@ class QuizSessionArgs {
   /// beantworteten Items dieser Lektion (siehe „Fehler ausbessern").
   final bool reviewMode;
 
-  String get sessionMode => '${format.code}_${direction.code}';
+  /// Wenn true, lädt die Session 10 Fragen aus dem Gesamt-Pool mit Seed
+  /// = heutiger Datumsschlüssel — alle Spieler bekommen am selben Tag
+  /// dieselben Items.
+  final bool dailyMode;
+
+  String get sessionMode =>
+      dailyMode ? 'daily_${format.code}_${direction.code}'
+                : '${format.code}_${direction.code}';
 
   @override
   bool operator ==(Object other) =>
@@ -41,10 +50,12 @@ class QuizSessionArgs {
           other.lessonId == lessonId &&
           other.direction == direction &&
           other.format == format &&
-          other.reviewMode == reviewMode;
+          other.reviewMode == reviewMode &&
+          other.dailyMode == dailyMode;
 
   @override
-  int get hashCode => Object.hash(lessonId, direction, format, reviewMode);
+  int get hashCode =>
+      Object.hash(lessonId, direction, format, reviewMode, dailyMode);
 }
 
 class QuizSessionState {
@@ -148,19 +159,27 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
     ref.onDispose(() => _ticker?.cancel());
     final db = ref.read(databaseProvider);
     final player = await ref.read(currentPlayerProvider.future);
-    final builder = QuizBuilder(db);
-    final reviewPool = _args.reviewMode
-        ? await db.wrongItemsForLesson(
-            playerId: player.id,
-            lessonId: _args.lessonId,
-          )
-        : null;
-    final questions = await builder.build(
-      lessonId: _args.lessonId,
-      playerId: player.id,
-      direction: _args.direction,
-      itemPoolOverride: reviewPool,
-    );
+    final List<QuizQuestion> questions;
+    if (_args.dailyMode) {
+      questions = await DailyQuizBuilder(db).build(
+        date: DateTime.now(),
+        direction: _args.direction,
+      );
+    } else {
+      final builder = QuizBuilder(db);
+      final reviewPool = _args.reviewMode
+          ? await db.wrongItemsForLesson(
+              playerId: player.id,
+              lessonId: _args.lessonId,
+            )
+          : null;
+      questions = await builder.build(
+        lessonId: _args.lessonId,
+        playerId: player.id,
+        direction: _args.direction,
+        itemPoolOverride: reviewPool,
+      );
+    }
     final sessionId = _uuid.v4();
     final now = DateTime.now().millisecondsSinceEpoch;
     await db.insertQuizSession(
@@ -304,6 +323,20 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
     );
     if (pendingBonus > 0) {
       await db.clearPendingBonusPoints(player.id);
+    }
+    if (_args.dailyMode) {
+      await db.insertDailyChallenge(
+        DailyChallengesCompanion.insert(
+          dateKey: dailyDateKey(DateTime.now()),
+          playerId: player.id,
+          sessionId: current.sessionId,
+          completedAt: now,
+          scorePoints: Value(finalScore),
+          correctCount: Value(current.correctCount),
+          totalCount: Value(current.questions.length),
+        ),
+      );
+      ref.invalidate(dailyChallengeTodayProvider);
     }
     state = AsyncData(current.copyWith(
       isFinished: true,

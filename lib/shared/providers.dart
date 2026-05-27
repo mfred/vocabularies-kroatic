@@ -15,6 +15,7 @@ import '../features/highscore/services/remote_leaderboard_service.dart';
 import '../features/highscore/services/session_detail_service.dart';
 import '../features/players/player_service.dart';
 import '../features/quiz/models/quiz_direction.dart';
+import '../features/quiz/services/daily_quiz_builder.dart';
 import '../features/streaks/models/streak_reward.dart';
 import '../features/streaks/services/streak_service.dart';
 
@@ -250,4 +251,16 @@ final authStateProvider = StreamProvider<User?>((ref) {
 final sessionDetailProvider = FutureProvider.autoDispose
     .family<SessionDetail?, String>((ref, sessionId) async {
   return ref.watch(sessionDetailServiceProvider).load(sessionId);
+});
+
+/// Heutige tägliche Challenge des aktuellen Spielers, null wenn noch nicht
+/// gespielt. Wird vom `QuizSessionController._finish` nach Abschluss invalidiert.
+final dailyChallengeTodayProvider =
+    FutureProvider.autoDispose<DailyChallenge?>((ref) async {
+  final player = await ref.watch(currentPlayerProvider.future);
+  final db = ref.watch(databaseProvider);
+  return db.getDailyChallenge(
+    dateKey: dailyDateKey(DateTime.now()),
+    playerId: player.id,
+  );
 });
