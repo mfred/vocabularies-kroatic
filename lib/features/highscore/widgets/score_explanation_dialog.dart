@@ -25,9 +25,9 @@ Future<void> showScoreExplanationDialog(BuildContext context) {
               text: 'Zeit-Bonus: 30 minus (Sekunden ÷ 20), gekappt 0…30. '
                   '0 s → +30, 1 min → +27, 5 min → +15, 10 min und mehr → 0.',
             ),
-            const _Bullet(text: 'Lautschrift-Joker: −2 P pro Nutzung.'),
-            const _Bullet(text: '50/50-Joker: −1 P pro Nutzung.'),
-            const _Bullet(text: 'Vorlesen-Joker: −1 P pro Nutzung.'),
+            const _Bullet(text: 'Lautschrift-Joker: −10 P pro Nutzung.'),
+            const _Bullet(text: '50/50-Joker: −5 P pro Nutzung.'),
+            const _Bullet(text: 'Vorlesen-Joker: −10 P pro Nutzung.'),
             const _Bullet(text: 'Negative Summen werden auf 0 gesetzt.'),
             const _Bullet(
               text: 'Streak-Bonus: am Ende jeder Quiz-Session werden '
@@ -50,7 +50,7 @@ Future<void> showScoreExplanationDialog(BuildContext context) {
               child: Text(
                 'Beispiel\n'
                 '8 richtig in 4:12 mit 2× IPA + 1× 50/50\n'
-                '→ 40 + (30 − 12) − (2·2 + 1) = 53 P',
+                '→ 40 + (30 − 12) − (2·10 + 5) = 33 P',
                 style: theme.textTheme.bodySmall,
               ),
             ),

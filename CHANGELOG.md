@@ -7,6 +7,18 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Changed — Iteration 38 (Joker-Wertigkeiten an Skala x20 angeglichen)
+- **Joker-Kosten** in `JokerType` deutlich angehoben, damit Joker bei der
+  seit Iteration 21 geltenden Score-Skala (Max ~80 P pro Quiz) wieder eine
+  strategische Ressource sind:
+  - **Lautschrift** 2 → **10 P**
+  - **50/50** 1 → **5 P**
+  - **Vorlesen** 1 → **10 P**
+- `score_explanation_dialog`: Bullet-Texte und Beispiel auf die neuen
+  Kosten umgestellt (Beispiel mit 2× IPA + 1× 50/50 jetzt 33 P statt 53 P).
+- Joker-Score-Tests rechnen mit den neuen Cost-Werten (2× IPA = −20,
+  gemischt 2×10 + 5 + 10 = 35). `computeScore` selbst unverändert.
+
 ### Changed — Iteration 25 (Duell pro Kategorie, Countdown blickdicht, Freunde-UX)
 - **Duell vom Top-Level entfernt**: keine eigene Karte mehr auf dem Home
   und kein `DuelHomeScreen`-Hub. Stattdessen ist „Duell" jetzt die vierte

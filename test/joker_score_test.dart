@@ -33,22 +33,22 @@ void main() {
       );
     });
 
-    test('ipa joker x2 = -4', () {
-      // 10×5 + 30 − (2×2) = 76
+    test('ipa joker x2 = -20', () {
+      // 10×5 + 30 − (2×10) = 60
       expect(
         computeScore(
-            correctCount: 10, durationSeconds: 0, jokerCost: 4),
-        76,
+            correctCount: 10, durationSeconds: 0, jokerCost: 20),
+        60,
       );
     });
 
     test('mixed jokers add to total cost', () {
-      // 2× ipa (2) + 1× 50/50 (1) + 1× audio (1) = 6
-      // 10×5 + 30 − 6 = 74
+      // 2× ipa (10) + 1× 50/50 (5) + 1× audio (10) = 35
+      // 10×5 + 30 − 35 = 45
       expect(
         computeScore(
-            correctCount: 10, durationSeconds: 0, jokerCost: 6),
-        74,
+            correctCount: 10, durationSeconds: 0, jokerCost: 35),
+        45,
       );
     });
 
