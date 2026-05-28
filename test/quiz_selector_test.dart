@@ -1,7 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vocabularies_kroatic/core/database/database.dart';
-import 'package:vocabularies_kroatic/features/quiz/models/item_attempt_stats.dart';
 import 'package:vocabularies_kroatic/features/quiz/services/quiz_selector.dart';
+import 'package:vocabularies_kroatic/features/quiz/services/sm2_scheduler.dart';
+
+const int _day = 86400000;
 
 Item _item(String id, {int difficulty = 1, String stage = 'words'}) => Item(
       id: id,
@@ -16,106 +18,89 @@ Item _item(String id, {int difficulty = 1, String stage = 'words'}) => Item(
       lessonVersion: '1.0.0',
     );
 
-void main() {
-  group('QuizSelector', () {
-    test(
-      'erstes Spiel ohne Stats: liefert die 10 leichtesten Items, sortiert nach difficulty/id',
-      () {
-        final items = [
-          for (var i = 0; i < 20; i++)
-            _item('w_${i.toString().padLeft(2, '0')}',
-                difficulty: 1 + (i % 5)),
-        ];
-        final picked = QuizSelector.pick(items: items, stats: const {});
-        expect(picked.length, 10);
-        // Erste sind diff=1, dann diff=2 etc.
-        expect(picked.first.difficulty, lessThanOrEqualTo(picked.last.difficulty));
-        for (var i = 0; i < picked.length - 1; i++) {
-          expect(
-            picked[i].difficulty <= picked[i + 1].difficulty,
-            isTrue,
-            reason: 'Difficulty muss aufsteigend sein',
-          );
-        }
-      },
+Sm2State _state({required int dueAtMs}) => Sm2State(
+      easeFactor: 2.5,
+      repetitions: 1,
+      intervalDays: 1,
+      dueAtMs: dueAtMs,
+      lastReviewedMs: 0,
     );
 
-    test('stumbled-Bias: falsch beantwortetes Item kommt zurück, korrektes nicht',
-        () {
-      final wrongItem = _item('stumble_01', difficulty: 1);
-      final correctItem = _item('master_01', difficulty: 1);
-      // Beide gleiche Difficulty — ohne Bias würde Sortierung alphabetisch master_ vor stumble_ stellen.
-      final newItems = [
-        for (var i = 0; i < 4; i++)
-          _item('new_${i.toString().padLeft(2, '0')}', difficulty: 1),
+void main() {
+  group('QuizSelector (SM-2)', () {
+    const now = 100 * _day;
+
+    test('erstes Spiel ohne SM-2-Stand: 10 leichteste, nach difficulty/id', () {
+      final items = [
+        for (var i = 0; i < 20; i++)
+          _item('w_${i.toString().padLeft(2, '0')}', difficulty: 1 + (i % 5)),
       ];
-      final items = [wrongItem, correctItem, ...newItems];
-      final stats = <String, ItemAttemptStats>{
-        'stumble_01': const ItemAttemptStats(
-          seenCount: 2,
-          wrongCount: 2,
-          lastCorrect: false,
-          lastAtMs: 1000,
-        ),
-        'master_01': const ItemAttemptStats(
-          seenCount: 3,
-          wrongCount: 0,
-          lastCorrect: true,
-          lastAtMs: 2000,
-        ),
-      };
-      final picked = QuizSelector.pick(items: items, stats: stats);
-      final ids = picked.map((e) => e.id).toSet();
-      expect(ids.contains('stumble_01'), isTrue,
-          reason: 'STUMBLED-Item gehört in den Quiz');
-      // Mit 4 new + 1 stumbled + 1 mastered = 6 Items total, 10 angefordert
-      // → fillover packt auch mastered_01 rein. Wichtig ist: stumbled ist drin.
+      final picked =
+          QuizSelector.pick(items: items, sm2: const {}, asOfMs: now);
+      expect(picked.length, 10);
+      for (var i = 0; i < picked.length - 1; i++) {
+        expect(picked[i].difficulty <= picked[i + 1].difficulty, isTrue,
+            reason: 'Difficulty muss aufsteigend sein');
+      }
     });
 
-    test(
-      'steady-state: alle Items gemeistert → MASTERED-Bucket füllt, '
-      'am längsten nicht gesehen zuerst',
-      () {
-        final items = [
-          _item('a', difficulty: 1),
-          _item('b', difficulty: 1),
-          _item('c', difficulty: 1),
-        ];
-        final stats = {
-          'a': const ItemAttemptStats(
-            seenCount: 2,
-            wrongCount: 0,
-            lastCorrect: true,
-            lastAtMs: 3000, // zuletzt gespielt
-          ),
-          'b': const ItemAttemptStats(
-            seenCount: 2,
-            wrongCount: 0,
-            lastCorrect: true,
-            lastAtMs: 1000, // länger nicht gesehen
-          ),
-          'c': const ItemAttemptStats(
-            seenCount: 2,
-            wrongCount: 0,
-            lastCorrect: true,
-            lastAtMs: 2000,
-          ),
-        };
-        final picked = QuizSelector.pick(items: items, stats: stats);
-        // Alle 3 müssen rein (count=10, Pool=3).
-        expect(picked.map((e) => e.id).toSet(), {'a', 'b', 'c'});
-        // Sortierung im Result ist nach difficulty/id (a,b,c).
-        expect(picked.map((e) => e.id).toList(), ['a', 'b', 'c']);
-      },
-    );
+    test('fällige Items werden vor nicht-fälligen gewählt', () {
+      final due = _item('due_01');
+      final notDue = _item('notdue_01');
+      final picked = QuizSelector.pick(
+        items: [notDue, due],
+        sm2: {
+          'due_01': _state(dueAtMs: now - _day), // überfällig
+          'notdue_01': _state(dueAtMs: now + 5 * _day), // erst später fällig
+        },
+        asOfMs: now,
+        count: 1,
+      );
+      expect(picked.map((e) => e.id), ['due_01']);
+    });
 
-    test(
-      'first-game stays under count when pool smaller than count',
-      () {
-        final items = [_item('only_a', difficulty: 1)];
-        final picked = QuizSelector.pick(items: items, stats: const {});
-        expect(picked.length, 1);
-      },
-    );
+    test('bei Überzahl fälliger Items kommen die überfälligsten rein', () {
+      // 15 fällige Items mit dueAt 0..14 (alle <= now). count=10 → die 10
+      // überfälligsten (dueAt 0..9) müssen rein, 10..14 fallen raus.
+      final items = [for (var i = 0; i < 15; i++) _item('i_$i')];
+      final sm2 = {
+        for (var i = 0; i < 15; i++) 'i_$i': _state(dueAtMs: i),
+      };
+      final picked = QuizSelector.pick(items: items, sm2: sm2, asOfMs: now);
+      final ids = picked.map((e) => e.id).toSet();
+      expect(picked.length, 10);
+      for (var i = 0; i < 10; i++) {
+        expect(ids.contains('i_$i'), isTrue, reason: 'i_$i (überfällig) fehlt');
+      }
+      for (var i = 10; i < 15; i++) {
+        expect(ids.contains('i_$i'), isFalse,
+            reason: 'i_$i (am wenigsten überfällig) sollte raus sein');
+      }
+    });
+
+    test('neue Items kommen mit dazu (newTarget)', () {
+      final dueItems = [for (var i = 0; i < 6; i++) _item('due_$i')];
+      final newItems = [for (var i = 0; i < 5; i++) _item('new_$i')];
+      final sm2 = {
+        for (var i = 0; i < 6; i++) 'due_$i': _state(dueAtMs: now - _day),
+      };
+      final picked = QuizSelector.pick(
+        items: [...dueItems, ...newItems],
+        sm2: sm2,
+        asOfMs: now,
+      );
+      final newPicked =
+          picked.where((e) => e.id.startsWith('new_')).length;
+      expect(newPicked, greaterThanOrEqualTo(QuizSelector.newTarget));
+    });
+
+    test('Pool kleiner als count → liefert was da ist', () {
+      final picked = QuizSelector.pick(
+        items: [_item('only_a')],
+        sm2: const {},
+        asOfMs: now,
+      );
+      expect(picked.length, 1);
+    });
   });
 }

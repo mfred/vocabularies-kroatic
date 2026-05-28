@@ -1,10 +1,10 @@
 import 'dart:math';
 
 import '../../../core/database/database.dart';
-import '../models/item_attempt_stats.dart';
 import '../models/quiz_direction.dart';
 import '../models/quiz_question.dart';
 import 'quiz_selector.dart';
+import 'sm2_scheduler.dart';
 
 const int kQuizQuestionCount = 10;
 const int kQuizOptionsPerQuestion = 4;
@@ -38,7 +38,7 @@ class QuizBuilder {
     final items = await _db.itemsForLesson(lessonId);
     if (items.isEmpty) return const [];
 
-    final stats = await _db.attemptStatsByItem(
+    final sm2 = await _db.sm2StatesByItem(
       playerId: playerId,
       mode: direction.mode,
     );
@@ -48,12 +48,10 @@ class QuizBuilder {
     if (questionItems.isEmpty) return const [];
     // Stage-Sort nach der Auswahl: Wörter zuerst, dann Phrasen, dann Sätze —
     // damit es am Anfang nicht zu schwer losgeht. Innerhalb derselben Stage
-    // bleibt die Reihenfolge des QuizSelectors (seenCount/difficulty) stabil.
-    final picked = sortByStage(_pickQuestionItems(questionItems, stats));
-    final seenIds = <String>{
-      for (final e in stats.entries)
-        if (e.value.seenCount > 0) e.key,
-    };
+    // bleibt die Reihenfolge des QuizSelectors (SM-2-Fälligkeit/difficulty) stabil.
+    final picked = sortByStage(_pickQuestionItems(questionItems, sm2));
+    // „Neu" = noch kein Versuch in dieser Richtung → nicht im SM-2-Zustand.
+    final seenIds = sm2.keys.toSet();
 
     return picked.map((item) {
       final isNew = !seenIds.contains(item.id);
@@ -90,7 +88,7 @@ class QuizBuilder {
 
   List<Item> _pickQuestionItems(
     List<Item> all,
-    Map<String, ItemAttemptStats> stats,
+    Map<String, Sm2State> sm2,
   ) {
     final words = all.where((i) => i.stage == 'words').toList();
     final phrases = all.where((i) => i.stage == 'phrases').toList();
@@ -98,7 +96,8 @@ class QuizBuilder {
     final stagePool = <Item>[...words, ...phrases, ...sentences];
     return QuizSelector.pick(
       items: stagePool,
-      stats: stats,
+      sm2: sm2,
+      asOfMs: DateTime.now().millisecondsSinceEpoch,
       count: kQuizQuestionCount,
     );
   }

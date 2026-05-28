@@ -1,7 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
-import '../../features/quiz/models/item_attempt_stats.dart';
 import '../../features/quiz/services/sm2_scheduler.dart';
 
 part 'database.g.dart';
@@ -392,32 +391,6 @@ GROUP BY items.lesson_id
     return rows
         .map((r) => r.readTable(quizAttempts).itemId)
         .toSet();
-  }
-
-  Future<Map<String, ItemAttemptStats>> attemptStatsByItem({
-    required String playerId,
-    required String mode,
-  }) async {
-    final query = select(quizAttempts).join([
-      innerJoin(
-        quizSessions,
-        quizSessions.id.equalsExp(quizAttempts.sessionId),
-      ),
-    ])
-      ..where(quizSessions.playerId.equals(playerId) &
-          quizSessions.direction.equals(mode))
-      ..orderBy([OrderingTerm.asc(quizAttempts.answeredAt)]);
-    final rows = await query.get();
-    final out = <String, ItemAttemptStats>{};
-    for (final r in rows) {
-      final a = r.readTable(quizAttempts);
-      final s = out[a.itemId] ?? ItemAttemptStats.empty();
-      out[a.itemId] = s.applyAttempt(
-        wasCorrect: a.wasCorrect,
-        atMs: a.answeredAt,
-      );
-    }
-    return out;
   }
 
   /// Faltet die Antwort-Historie pro Item durch die SM-2-Rekurrenz und liefert
