@@ -239,44 +239,98 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
               ],
             );
 
-            final bottomControls = Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                JokerBar(
-                  question: question,
-                  format: widget.format,
-                  usedJokers: state.usedJokersThisQuestion,
-                  isAnswered: state.isAnswered,
-                  onUseJoker: (j) {
-                    ref
-                        .read(quizSessionControllerProvider(_args).notifier)
-                        .useJoker(j);
-                    if (j == JokerType.audio) {
-                      _playCorrectAnswer(question);
-                    }
-                  },
-                ),
-                if (state.isAnswered && state.wasLastCorrect == false) ...[
-                  const SizedBox(height: 12),
-                  FilledButton.icon(
-                    onPressed: () => _advance(),
-                    icon: const Icon(Icons.arrow_forward),
-                    label: const Text('Weiter'),
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                  ),
-                ],
-              ],
+            final jokerBar = JokerBar(
+              question: question,
+              format: widget.format,
+              usedJokers: state.usedJokersThisQuestion,
+              isAnswered: state.isAnswered,
+              onUseJoker: (j) {
+                ref
+                    .read(quizSessionControllerProvider(_args).notifier)
+                    .useJoker(j);
+                if (j == JokerType.audio) {
+                  _playCorrectAnswer(question);
+                }
+              },
             );
 
-            final Widget scrollArea = isWide
-                ? _CenteredScrollable(
+            final showWeiter =
+                state.isAnswered && state.wasLastCorrect == false;
+            final weiterButton = FilledButton.icon(
+              onPressed: () => _advance(),
+              icon: const Icon(Icons.arrow_forward),
+              label: const Text('Weiter'),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            );
+
+            if (isWide) {
+              // Querformat: links Prompt + Jokerleiste, rechts Antworten +
+              // Weiter. So bekommt die Antwortliste die volle Höhe.
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 980),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Expanded(
+                          child: Column(
+                            children: [
+                              Expanded(
+                                child: _CenteredScrollable(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      progressHeader,
+                                      const SizedBox(height: 16),
+                                      promptBlock,
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              jokerBar,
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 28),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              Expanded(
+                                child: _CenteredScrollable(child: answerBlock),
+                              ),
+                              if (showWeiter) ...[
+                                const SizedBox(height: 12),
+                                weiterButton,
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            // Hochformat: einspaltig, Jokerleiste unten über die volle Breite.
+            return Center(
+              child: ConstrainedBox(
+                constraints:
+                    const BoxConstraints(maxWidth: kTabletMaxContentWidth),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: _CenteredScrollable(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -284,41 +338,18 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                               progressHeader,
                               const SizedBox(height: 16),
                               promptBlock,
+                              const SizedBox(height: 18),
+                              answerBlock,
                             ],
                           ),
                         ),
-                        const SizedBox(width: 28),
-                        Expanded(child: answerBlock),
-                      ],
-                    ),
-                  )
-                : _CenteredScrollable(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        progressHeader,
-                        const SizedBox(height: 16),
-                        promptBlock,
-                        const SizedBox(height: 18),
-                        answerBlock,
-                      ],
-                    ),
-                  );
-
-            return Center(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: isWide ? 980.0 : kTabletMaxContentWidth,
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(child: scrollArea),
+                      ),
                       const SizedBox(height: 12),
-                      bottomControls,
+                      jokerBar,
+                      if (showWeiter) ...[
+                        const SizedBox(height: 12),
+                        weiterButton,
+                      ],
                     ],
                   ),
                 ),

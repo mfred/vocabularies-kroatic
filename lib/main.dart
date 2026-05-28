@@ -13,6 +13,7 @@ import 'features/streaks/services/streak_service.dart';
 import 'features/players/player_service.dart';
 import 'firebase_options.dart';
 import 'shared/firebase_status.dart';
+import 'shared/providers.dart';
 
 const Duration _kSplashMinHold = Duration(milliseconds: 1500);
 
@@ -23,8 +24,18 @@ Future<void> main() async {
   FlutterNativeSplash.preserve(widgetsBinding: binding);
   final startedAt = DateTime.now();
   await _tryInitFirebase();
-  unawaited(_initReminderInBackground());
-  runApp(const ProviderScope(child: VocabulariesApp()));
+  // Eine einzige DB-Instanz für die gesamte App. Frueher öffnete der
+  // Reminder-Init eine zweite Connection auf dieselbe Datei — beim Kaltstart
+  // rannten beide gleichzeitig ins createAll()/Migration und kollidierten
+  // mit "database is locked (code 5)".
+  final db = AppDatabase();
+  unawaited(_initReminderInBackground(db));
+  runApp(
+    ProviderScope(
+      overrides: [databaseProvider.overrideWithValue(db)],
+      child: const VocabulariesApp(),
+    ),
+  );
   final elapsed = DateTime.now().difference(startedAt);
   final remaining = _kSplashMinHold - elapsed;
   if (remaining > Duration.zero) {
@@ -33,19 +44,14 @@ Future<void> main() async {
   FlutterNativeSplash.remove();
 }
 
-/// Plant nach Kaltstart den Abend-Reminder neu. Läuft in einer eigenen
-/// AppDatabase-Instanz, damit der UI-Provider-Scope nicht warten muss.
+/// Plant nach Kaltstart den Abend-Reminder neu. Nutzt die geteilte
+/// AppDatabase-Instanz (kein eigenes close — die DB lebt für die App-Laufzeit).
 /// Fehler werden geschluckt — der Reminder ist eine Komfortfunktion.
-Future<void> _initReminderInBackground() async {
+Future<void> _initReminderInBackground(AppDatabase db) async {
   try {
-    final db = AppDatabase();
-    try {
-      final player = await PlayerService(db).ensureDefaultPlayer();
-      final reminder = ReminderService(db, StreakService(db));
-      await reminder.rescheduleReminder(player.id);
-    } finally {
-      await db.close();
-    }
+    final player = await PlayerService(db).ensureDefaultPlayer();
+    final reminder = ReminderService(db, StreakService(db));
+    await reminder.rescheduleReminder(player.id);
   } catch (_) {
     // Reminder ist nicht kritisch fürs App-Funktionieren.
   }
