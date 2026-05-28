@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:vocabularies_kroatic/features/quiz/models/joker_type.dart';
 import 'package:vocabularies_kroatic/features/quiz/models/quiz_direction.dart';
+import 'package:vocabularies_kroatic/features/quiz/models/quiz_format.dart';
 import 'package:vocabularies_kroatic/features/quiz/models/quiz_question.dart';
 import 'package:vocabularies_kroatic/features/quiz/widgets/joker_bar.dart';
 
@@ -28,17 +29,18 @@ class _CenteredScrollable extends StatelessWidget {
 
 QuizQuestion _question() => const QuizQuestion(
       itemId: 'i1',
-      prompt: 'kaufen',
-      correct: 'kupiti',
-      options: ['kupiti', 'kartica', 'lubenica', 'popust'],
-      ipaHint: 'ˈkupiti',
+      prompt: 'Mann',
+      correct: 'Muškarac',
+      options: ['Vlada', 'Nedostatak', 'Okoliš', 'Muškarac'],
+      ipaHint: 'ˈmuʃkarats',
       isNewWord: false,
       direction: QuizDirection.deToHr,
       difficulty: 1,
     );
 
-/// Baut das Hochformat-Quizlayout (vereinfacht, aber strukturgleich zu
-/// quiz_screen.dart) mit umschaltbarem IPA-Joker.
+/// Repliziert den Hochformat-Zweig aus quiz_screen.dart strukturell exakt
+/// (Center > ConstrainedBox(640) > Padding > Column[ Expanded(_Centered…),
+/// JokerBar ]) und nutzt die ECHTE JokerBar + JokerReveals.
 class _PortraitHarness extends StatefulWidget {
   const _PortraitHarness();
   @override
@@ -51,24 +53,45 @@ class _PortraitHarnessState extends State<_PortraitHarness> {
   @override
   Widget build(BuildContext context) {
     final question = _question();
+
     final promptBlock = Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(height: 80, color: Colors.blue.shade50, child: Text(question.prompt)),
-        if (_used.contains(JokerType.ipa) || _used.contains(JokerType.audio)) ...[
+        Container(
+          height: 80,
+          alignment: Alignment.centerLeft,
+          color: Colors.blue.shade50,
+          child: Text(question.prompt),
+        ),
+        if (_used.contains(JokerType.ipa) ||
+            _used.contains(JokerType.audio)) ...[
           const SizedBox(height: 12),
           JokerReveals(question: question, usedJokers: _used),
         ],
       ],
     );
+
     final answerBlock = Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (final o in question.options)
-          Container(height: 60, margin: const EdgeInsets.only(bottom: 8), color: Colors.grey.shade200, child: Text(o)),
+          Container(
+            height: 88,
+            margin: const EdgeInsets.only(bottom: 8),
+            color: Colors.grey.shade200,
+            child: Text(o),
+          ),
       ],
+    );
+
+    final jokerBar = JokerBar(
+      question: question,
+      format: QuizFormat.multipleChoice,
+      usedJokers: _used,
+      isAnswered: false,
+      onUseJoker: (j) => setState(() => _used.add(j)),
     );
 
     return Scaffold(
@@ -95,10 +118,7 @@ class _PortraitHarnessState extends State<_PortraitHarness> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: () => setState(() => _used.add(JokerType.ipa)),
-                    child: const Text('IPA'),
-                  ),
+                  jokerBar,
                 ],
               ),
             ),
@@ -109,36 +129,37 @@ class _PortraitHarnessState extends State<_PortraitHarness> {
   }
 }
 
+Future<void> _pumpAt(WidgetTester tester, Size size) async {
+  tester.view.physicalSize = size;
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.resetPhysicalSize);
+  await tester.pumpWidget(const MaterialApp(home: _PortraitHarness()));
+}
+
 void main() {
-  testWidgets('IPA-Reveal erscheint im Hochformat nach Joker-Nutzung',
-      (tester) async {
-    tester.view.physicalSize = const Size(411, 800);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.resetPhysicalSize);
+  for (final size in const [
+    Size(800, 1280), // Tablet hochkant
+    Size(411, 731), // Phone
+    Size(360, 560), // sehr klein, Inhalt > Viewport
+  ]) {
+    testWidgets('IPA-Reveal sichtbar nach echtem Joker-Tap @ $size',
+        (tester) async {
+      await _pumpAt(tester, size);
 
-    await tester.pumpWidget(const MaterialApp(home: _PortraitHarness()));
-    expect(find.textContaining('ˈkupiti'), findsNothing);
+      expect(find.textContaining('ˈmuʃkarats'), findsNothing);
 
-    await tester.tap(find.text('IPA'));
-    await tester.pumpAndSettle();
+      // Echter Tap auf den Lautschrift-Joker in der echten JokerBar.
+      await tester.tap(find.text('Lautschrift'));
+      await tester.pumpAndSettle();
 
-    final ipaFinder = find.textContaining('ˈkupiti');
-    expect(ipaFinder, findsOneWidget);
-    // Sichtbarkeit: das Reveal muss im Viewport liegen (nicht abgeschnitten).
-    final box = tester.getRect(ipaFinder);
-    expect(box.top, greaterThanOrEqualTo(0));
-    expect(box.bottom, lessThanOrEqualTo(800));
-  });
+      final reveal = find.textContaining('ˈmuʃkarats');
+      expect(reveal, findsOneWidget,
+          reason: 'Reveal muss nach Joker-Nutzung im Baum sein');
 
-  testWidgets('IPA-Reveal auch bei viel Inhalt (kleiner Screen) sichtbar',
-      (tester) async {
-    tester.view.physicalSize = const Size(360, 560);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.resetPhysicalSize);
-
-    await tester.pumpWidget(const MaterialApp(home: _PortraitHarness()));
-    await tester.tap(find.text('IPA'));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('ˈkupiti'), findsOneWidget);
-  });
+      // Sichtbar = innerhalb des Bildschirms gerendert.
+      final box = tester.getRect(reveal);
+      expect(box.top, greaterThanOrEqualTo(0.0));
+      expect(box.bottom, lessThanOrEqualTo(size.height));
+    });
+  }
 }

@@ -45,7 +45,13 @@ class ManifestSyncService {
       int updated = 0;
       for (final lesson in manifest.lessons) {
         final cached = await _db.getLessonCache(lesson.id);
-        if (cached != null && cached.version == lesson.version) {
+        // Cache nur überspringen, wenn Version UND Inhalts-Hash passen.
+        // Frühere Versionen prüften nur die Version — wurde der Lektions-
+        // inhalt geändert (z. B. hr.ipa nachgepflegt), ohne die Version zu
+        // erhöhen, blieben veraltete Items im Cache (Joker/IPA fehlten).
+        if (cached != null &&
+            cached.version == lesson.version &&
+            cached.sha256.toLowerCase() == lesson.sha256.toLowerCase()) {
           _log.d('Lektion ${lesson.id} aktuell (v${lesson.version})');
           continue;
         }
