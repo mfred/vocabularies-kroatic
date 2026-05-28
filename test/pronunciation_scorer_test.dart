@@ -8,12 +8,9 @@ void main() {
       expect(AnswerEvaluator.pronunciationScore('bok.', 'Bok'), 1.0);
     });
 
-    test('Diakritika senken den Score (ć ≠ c)', () {
-      // 'cao' vs 'ćao': 1 Ersetzung bei Länge 3 → 1 - 1/3.
-      expect(
-        AnswerEvaluator.pronunciationScore('cao', 'ćao'),
-        closeTo(0.6667, 1e-3),
-      );
+    test('Diakritika werden gefaltet → fehlender Akzent senkt Score nicht', () {
+      // 'cao' vs 'ćao': ć→c-Faltung in der Normalisierung → identisch.
+      expect(AnswerEvaluator.pronunciationScore('cao', 'ćao'), 1.0);
     });
 
     test('völlig anderes Wort → niedriger Score', () {

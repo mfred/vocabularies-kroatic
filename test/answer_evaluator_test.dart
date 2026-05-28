@@ -38,9 +38,24 @@ void main() {
       expect(r.verdict, AnswerVerdict.tolerant);
     });
 
-    test('diacritics matter (different word = wrong)', () {
+    test('fehlende Diakritika → tolerant (richtig mit Hinweis)', () {
       final r = e.evaluate('Dovidenja', 'Doviđenja');
+      expect(r.verdict, AnswerVerdict.tolerant);
+      expect(r.isCorrect, isTrue);
+      expect(r.hasSpellingNotice, isTrue);
+      expect(r.normalizedExpected, 'Doviđenja');
+    });
+
+    test('cao → čao gilt als tolerant (richtig)', () {
+      final r = e.evaluate('cao', 'čao');
+      expect(r.verdict, AnswerVerdict.tolerant);
+      expect(r.isCorrect, isTrue);
+    });
+
+    test('ohne tolerant (Multiple Choice) bleibt Diakritika-Diff falsch', () {
+      final r = e.evaluate('cao', 'čao', tolerant: false);
       expect(r.verdict, AnswerVerdict.wrong);
+      expect(r.isCorrect, isFalse);
     });
 
     test('completely different words are wrong', () {

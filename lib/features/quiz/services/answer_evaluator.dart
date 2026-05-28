@@ -35,14 +35,19 @@ class AnswerEvaluator {
   /// um das Sprechen zu fördern. Leicht justierbar.
   static const double kPronunciationPassThreshold = 0.6;
 
-  /// Strict-equal: exakt gleich (nach NFC + Trim).
-  /// Tolerant-equal: gleich nach Lowercase + Apostroph-Strip + Whitespace-Collapse.
-  /// Bei `fuzzy` (Sprechen) wird zusätzlich eine Levenshtein-Ähnlichkeit berechnet:
+  /// Strict-equal: exakt gleich (nach NFC + Trim) — die perfekte Antwort, kein Hinweis.
+  /// Tolerant-equal (nur wenn [tolerant]): gleich nach Lowercase + Apostroph-Strip +
+  /// Diakritika-Faltung (č/ć→c, š→s, ž→z, đ→d) + Whitespace-Collapse. Eine nur durch
+  /// Akzente abweichende Antwort gilt damit als richtig — mit Schreibweise-Hinweis.
+  /// Bei [fuzzy] (Sprechen) wird zusätzlich eine Levenshtein-Ähnlichkeit berechnet:
   /// ab [kPronunciationPassThreshold] zählt die Antwort als `close` (richtig).
-  /// Diakritika (č, ć, š, ž, đ) bleiben relevant — sie werden NICHT normalisiert.
+  ///
+  /// [tolerant] ist für Multiple Choice auszuschalten (exakte Option-Auswahl) — sonst
+  /// könnte eine nur-diakritisch abweichende falsche Option als richtig durchgehen.
   AnswerEvaluation evaluate(
     String userInput,
     String expected, {
+    bool tolerant = true,
     bool fuzzy = false,
   }) {
     final strictUser = _basicTrim(userInput);
@@ -57,7 +62,9 @@ class AnswerEvaluator {
     }
     final tolerantUser = _normalize(strictUser);
     final tolerantExpected = _normalize(strictExpected);
-    if (tolerantUser.isNotEmpty && tolerantUser == tolerantExpected) {
+    if (tolerant &&
+        tolerantUser.isNotEmpty &&
+        tolerantUser == tolerantExpected) {
       return AnswerEvaluation(
         verdict: AnswerVerdict.tolerant,
         normalizedExpected: strictExpected,
@@ -106,9 +113,28 @@ class AnswerEvaluator {
     var t = s.toLowerCase();
     // Verschiedene Apostroph-/Quote-Varianten entfernen
     t = t.replaceAll(RegExp(r"['ʼ‘’`´’ʼ]"), '');
+    // Kroatische Diakritika falten, damit eine nur durch Akzente abweichende
+    // Antwort als tolerant-richtig gilt (mit Hinweis statt als Fehler).
+    t = _foldDiacritics(t);
     // Punctuation am Rand entfernen (.,?!:;)
     t = t.replaceAll(RegExp(r'^[\.\,\?\!\:\;]+|[\.\,\?\!\:\;]+$'), '');
     t = t.trim().replaceAll(RegExp(r'\s+'), ' ');
     return t;
+  }
+
+  static const Map<String, String> _diacriticFolds = {
+    'č': 'c',
+    'ć': 'c',
+    'š': 's',
+    'ž': 'z',
+    'đ': 'd',
+  };
+
+  static String _foldDiacritics(String s) {
+    final buf = StringBuffer();
+    for (final ch in s.split('')) {
+      buf.write(_diacriticFolds[ch] ?? ch);
+    }
+    return buf.toString();
   }
 }

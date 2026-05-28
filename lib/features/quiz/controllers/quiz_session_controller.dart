@@ -287,8 +287,16 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
     final question = current.current;
     if (question == null) return;
 
-    final eval = const AnswerEvaluator()
-        .evaluate(picked, question.correct, fuzzy: _args.format.isSpeech);
+    // Multiple Choice bleibt strikt (exakte Option) — Diakritika-Toleranz nur
+    // bei Freitext (Schreiben/Sprechen), sonst könnte eine nur-diakritisch
+    // abweichende falsche Option als richtig zählen.
+    final isMc = _args.format == QuizFormat.multipleChoice;
+    final eval = const AnswerEvaluator().evaluate(
+      picked,
+      question.correct,
+      tolerant: !isMc,
+      fuzzy: _args.format.isSpeech,
+    );
     final wasCorrect = eval.isCorrect;
     final spellingNotice = eval.hasSpellingNotice ? question.correct : null;
     final now = DateTime.now().millisecondsSinceEpoch;

@@ -44,93 +44,150 @@ class QuizSummaryScreen extends StatelessWidget {
           onPressed: onBack,
         ),
       ),
-      body: TabletConstrained(
-        child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              lessonTitle,
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              percent >= 80
-                  ? 'Stark! 🎉'
-                  : percent >= 50
-                      ? 'Solide.'
-                      : 'Weiter üben!',
-              style: theme.textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 20),
-            _BigStat(
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth >= 600 &&
+                constraints.maxWidth > constraints.maxHeight;
+
+            final richtig = _BigStat(
               label: 'Richtig',
               value: '$correctCount / $totalCount',
               accent: percent >= 50 ? Colors.green : Colors.orange,
               theme: theme,
-            ),
-            const SizedBox(height: 12),
-            _BigStat(
+            );
+            final quote = _BigStat(
               label: 'Trefferquote',
               value: '$percent %',
               accent: scheme.primary,
               theme: theme,
-            ),
-            const SizedBox(height: 12),
-            _BigStat(
+            );
+            final zeit = _BigStat(
               label: 'Zeit',
               value: '$minutes:$seconds',
               accent: scheme.secondary,
               theme: theme,
-            ),
-            const SizedBox(height: 12),
-            _BigStat(
+            );
+            final hinweise = _BigStat(
               label: 'Hinweise',
               value: '$hintsUsed',
               accent: scheme.tertiary,
               theme: theme,
-            ),
-            const SizedBox(height: 12),
-            _BigStat(
+            );
+            final punkte = _BigStat(
               label: 'Punkte',
               value: '$score',
               accent: scheme.primary,
               theme: theme,
               emphasize: true,
-            ),
-            const Spacer(),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: onBack,
-                    icon: const Icon(Icons.arrow_back),
-                    label: const Text('Zur Lektion'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+            );
+
+            // Querformat: die vier Basis-Kennzahlen als 2×2-Grid (spart Höhe,
+            // nutzt die Breite), Punkte voll-breit als Highlight darunter.
+            final Widget stats = isWide
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(child: richtig),
+                            const SizedBox(width: 12),
+                            Expanded(child: quote),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(child: zeit),
+                            const SizedBox(width: 12),
+                            Expanded(child: hinweise),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      punkte,
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      richtig,
+                      const SizedBox(height: 12),
+                      quote,
+                      const SizedBox(height: 12),
+                      zeit,
+                      const SizedBox(height: 12),
+                      hinweise,
+                      const SizedBox(height: 12),
+                      punkte,
+                    ],
+                  );
+
+            return TabletConstrained(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(20, isWide ? 12 : 24, 20, 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      lessonTitle,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: onRetry,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Erneut spielen'),
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    const SizedBox(height: 4),
+                    Text(
+                      percent >= 80
+                          ? 'Stark! 🎉'
+                          : percent >= 50
+                              ? 'Solide.'
+                              : 'Weiter üben!',
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
+                    SizedBox(height: isWide ? 12 : 20),
+                    // Scroll als Sicherheitsnetz auf sehr flachen Screens; die
+                    // Buttons bleiben unten gepinnt.
+                    Expanded(child: SingleChildScrollView(child: stats)),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: onBack,
+                            icon: const Icon(Icons.arrow_back),
+                            label: const Text('Zur Lektion'),
+                            style: OutlinedButton.styleFrom(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 16),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: onRetry,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Erneut spielen'),
+                            style: FilledButton.styleFrom(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 16),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -163,11 +220,13 @@ class _BigStat extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Text(
-            label,
-            style: theme.textTheme.titleMedium,
+          Expanded(
+            child: Text(
+              label,
+              style: theme.textTheme.titleMedium,
+            ),
           ),
-          const SizedBox(width: 24),
+          const SizedBox(width: 12),
           Text(
             value,
             style: (emphasize
