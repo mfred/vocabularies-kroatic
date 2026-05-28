@@ -170,7 +170,11 @@ class _JokerButton extends StatelessWidget {
       child: InkWell(
         onTap: disabled ? null : onTap,
         borderRadius: BorderRadius.circular(10),
-        child: Padding(
+        // Gesamten Button dimmen, wenn deaktiviert — sonst wirkt das farbige
+        // Emoji (Farb-Glyphe ignoriert TextStyle.color) wie ein aktiver Button.
+        child: Opacity(
+          opacity: disabled ? 0.4 : 1.0,
+          child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -196,6 +200,7 @@ class _JokerButton extends StatelessWidget {
                 ),
               ),
             ],
+          ),
           ),
         ),
       ),
