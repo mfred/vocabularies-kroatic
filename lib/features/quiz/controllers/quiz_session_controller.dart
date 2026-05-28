@@ -17,6 +17,7 @@ import '../../streaks/services/streak_service.dart' show kMaxStreakSavers;
 import '../services/answer_evaluator.dart';
 import '../services/daily_assignment.dart';
 import '../services/daily_quiz_builder.dart';
+import '../services/due_review_builder.dart';
 import '../services/quiz_builder.dart';
 
 class QuizSessionArgs {
@@ -26,6 +27,7 @@ class QuizSessionArgs {
     required this.format,
     this.reviewMode = false,
     this.dailyMode = false,
+    this.dueReviewMode = false,
   });
 
   final String lessonId;
@@ -41,9 +43,15 @@ class QuizSessionArgs {
   /// dieselben Items.
   final bool dailyMode;
 
-  String get sessionMode =>
-      dailyMode ? 'daily_${format.code}_${direction.code}'
-                : '${format.code}_${direction.code}';
+  /// Wenn true, kommen die Fragen aus den lektionsübergreifend fälligen
+  /// SM-2-Items (siehe „Fällige Wiederholung").
+  final bool dueReviewMode;
+
+  String get sessionMode {
+    if (dailyMode) return 'daily_${format.code}_${direction.code}';
+    if (dueReviewMode) return 'due_${format.code}_${direction.code}';
+    return '${format.code}_${direction.code}';
+  }
 
   @override
   bool operator ==(Object other) =>
@@ -53,11 +61,12 @@ class QuizSessionArgs {
           other.direction == direction &&
           other.format == format &&
           other.reviewMode == reviewMode &&
-          other.dailyMode == dailyMode;
+          other.dailyMode == dailyMode &&
+          other.dueReviewMode == dueReviewMode;
 
   @override
-  int get hashCode =>
-      Object.hash(lessonId, direction, format, reviewMode, dailyMode);
+  int get hashCode => Object.hash(
+      lessonId, direction, format, reviewMode, dailyMode, dueReviewMode);
 }
 
 class QuizSessionState {
@@ -185,6 +194,12 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
           sessionLessonId = _assignment!.categoryLessonId!;
         }
       }
+    } else if (_args.dueReviewMode) {
+      questions = await DueReviewBuilder(db).build(
+        playerId: player.id,
+        direction: _args.direction,
+        asOfMs: DateTime.now().millisecondsSinceEpoch,
+      );
     } else {
       final builder = QuizBuilder(db);
       final reviewPool = _args.reviewMode
@@ -396,6 +411,9 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
     ref.invalidate(currentStreakProvider);
     // „Fehler ausbessern"-Pool für diese Lektion neu zählen.
     ref.invalidate(wrongItemsCountProvider(_args.lessonId));
+    // Fällige-Wiederholung-Zähler neu berechnen — die eben gespielten Items
+    // sind jetzt neu terminiert.
+    ref.invalidate(dueReviewCountProvider(_args.direction));
     // Reward erst NACH der Wertung dieser Session prüfen — sonst würde der
     // Bonus für genau diese Session schon mit eingerechnet.
     ref.invalidate(streakRewardCheckProvider);

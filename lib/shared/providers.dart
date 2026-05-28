@@ -18,6 +18,7 @@ import '../features/players/player_service.dart';
 import '../features/quiz/models/quiz_direction.dart';
 import '../features/quiz/services/daily_assignment.dart';
 import '../features/quiz/services/daily_quiz_builder.dart';
+import '../features/quiz/services/due_review_builder.dart';
 import '../features/streaks/models/streak_reward.dart';
 import '../features/streaks/services/reminder_service.dart';
 import '../features/streaks/services/streak_service.dart';
@@ -91,6 +92,17 @@ final wrongItemsCountProvider =
         lessonId: lessonId,
       );
   return items.length;
+});
+
+/// Anzahl der in der gewählten Richtung fälligen SM-2-Wiederholungs-Items.
+final dueReviewCountProvider =
+    FutureProvider.autoDispose.family<int, QuizDirection>((ref, direction) async {
+  final player = await ref.watch(currentPlayerProvider.future);
+  return DueReviewBuilder(ref.watch(databaseProvider)).dueCount(
+    playerId: player.id,
+    direction: direction,
+    asOfMs: DateTime.now().millisecondsSinceEpoch,
+  );
 });
 
 final playerServiceProvider = Provider<PlayerService>((ref) {

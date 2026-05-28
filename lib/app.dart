@@ -285,6 +285,10 @@ class _LessonOverview extends ConsumerWidget {
               padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
               sliver: SliverToBoxAdapter(child: _DailyChallengeCard()),
             ),
+            const SliverPadding(
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
+              sliver: SliverToBoxAdapter(child: _DueReviewCard()),
+            ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               sliver: SliverList.builder(
@@ -561,6 +565,83 @@ class _DailyChallengeCard extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _DueReviewCard extends ConsumerWidget {
+  const _DueReviewCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final direction = ref.watch(preferredDirectionProvider);
+    final countAsync = ref.watch(dueReviewCountProvider(direction));
+    final count = countAsync.value ?? 0;
+    // Eintrag nur zeigen, wenn tatsächlich etwas fällig ist — kein leerer
+    // Platzhalter.
+    if (count == 0) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Card(
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        color: scheme.secondaryContainer.withValues(alpha: 0.6),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(width: 1.5, color: scheme.secondary),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => QuizScreen(
+                  lessonId: '__due__',
+                  lessonTitle: 'Fällige Wiederholung',
+                  direction: direction,
+                  format: QuizFormat.multipleChoice,
+                  dueReviewMode: true,
+                ),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            child: Row(
+              children: [
+                const Text('🔁', style: TextStyle(fontSize: 32)),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Fällige Wiederholung',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        count == 1
+                            ? '1 Vokabel fällig'
+                            : '$count Vokabeln fällig',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.play_arrow, color: scheme.secondary, size: 28),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

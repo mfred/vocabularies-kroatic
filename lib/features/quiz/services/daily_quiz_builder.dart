@@ -39,7 +39,7 @@ class DailyQuizBuilder {
       case DailyMode.newWords:
       case DailyMode.mistakes:
         final all = await _db.allItems();
-        return _buildFromPool(
+        return buildPoolQuestions(
           pool: assignment.itemPool,
           allItems: all,
           direction: direction,
@@ -47,49 +47,53 @@ class DailyQuizBuilder {
         );
     }
   }
+}
 
-  List<QuizQuestion> _buildFromPool({
-    required List<Item> pool,
-    required List<Item> allItems,
-    required QuizDirection direction,
-    required Random rng,
-  }) {
-    return pool.map((item) {
-      final correct = _answerFor(item, direction);
-      final candidates = [
-        ...allItems.where((i) => i.id != item.id),
-      ]..shuffle(rng);
-      final distractors = <String>{};
-      for (final c in candidates) {
-        final ans = _answerFor(c, direction);
-        if (ans == correct || distractors.contains(ans)) continue;
-        distractors.add(ans);
-        if (distractors.length == kQuizOptionsPerQuestion - 1) break;
-      }
-      final options = [correct, ...distractors]..shuffle(rng);
-      return QuizQuestion(
-        itemId: item.id,
-        prompt: _promptFor(item, direction),
-        correct: correct,
-        options: options,
-        ipaHint: _ipaFor(item),
-        isNewWord: false,
-        direction: direction,
-        difficulty: item.difficulty,
-      );
-    }).toList();
-  }
+/// Baut Fragen aus einem vorgegebenen Item-Pool. Distraktoren werden aus dem
+/// Gesamtbestand gezogen (lektionsübergreifend), damit auch gemischte Pools
+/// (Daily „Fehler"/„neue Vokabeln", fällige Wiederholung) plausible Optionen
+/// bekommen. Geteilt von Daily-Quiz und Fällig-Wiederholung.
+List<QuizQuestion> buildPoolQuestions({
+  required List<Item> pool,
+  required List<Item> allItems,
+  required QuizDirection direction,
+  required Random rng,
+}) {
+  return pool.map((item) {
+    final correct = _poolAnswer(item, direction);
+    final candidates = [
+      ...allItems.where((i) => i.id != item.id),
+    ]..shuffle(rng);
+    final distractors = <String>{};
+    for (final c in candidates) {
+      final ans = _poolAnswer(c, direction);
+      if (ans == correct || distractors.contains(ans)) continue;
+      distractors.add(ans);
+      if (distractors.length == kQuizOptionsPerQuestion - 1) break;
+    }
+    final options = [correct, ...distractors]..shuffle(rng);
+    return QuizQuestion(
+      itemId: item.id,
+      prompt: _poolPrompt(item, direction),
+      correct: correct,
+      options: options,
+      ipaHint: _poolIpa(item),
+      isNewWord: false,
+      direction: direction,
+      difficulty: item.difficulty,
+    );
+  }).toList();
+}
 
-  String _promptFor(Item item, QuizDirection direction) =>
-      direction == QuizDirection.deToHr ? item.deText : item.hrText;
+String _poolPrompt(Item item, QuizDirection direction) =>
+    direction == QuizDirection.deToHr ? item.deText : item.hrText;
 
-  String _answerFor(Item item, QuizDirection direction) =>
-      direction == QuizDirection.deToHr ? item.hrText : item.deText;
+String _poolAnswer(Item item, QuizDirection direction) =>
+    direction == QuizDirection.deToHr ? item.hrText : item.deText;
 
-  /// Lautschrift-Joker zeigt immer die **kroatische** IPA — siehe Begründung
-  /// in QuizBuilder._ipaFor (deutsche IPA ist im Datensatz leer).
-  String? _ipaFor(Item item) {
-    final ipa = item.hrIpa;
-    return (ipa == null || ipa.trim().isEmpty) ? null : ipa;
-  }
+/// Lautschrift-Joker zeigt immer die **kroatische** IPA — siehe Begründung
+/// in QuizBuilder._ipaFor (deutsche IPA ist im Datensatz leer).
+String? _poolIpa(Item item) {
+  final ipa = item.hrIpa;
+  return (ipa == null || ipa.trim().isEmpty) ? null : ipa;
 }
