@@ -171,92 +171,160 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
         ],
       ),
       body: SafeArea(
-        child: TabletConstrained(
-          child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // Querformat (breit & flacher als hoch) → zweispaltig, damit der
+            // Inhalt ohne Scrollen passt. Hochformat → einspaltig, vertikal
+            // zentriert.
+            final isWide = constraints.maxWidth >= 600 &&
+                constraints.maxWidth > constraints.maxHeight;
+
+            final progressHeader = Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                QuizProgressBar(
+                  total: state.totalQuestions,
+                  currentIndex: state.currentIndex,
+                  correctMask: _correctMask,
+                ),
+                const SizedBox(height: 8),
+                Center(
+                  child: Text(
+                    'Frage ${state.currentIndex + 1} / ${state.totalQuestions}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            );
+
+            final promptBlock = Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (widget.format == QuizFormat.listenSpeak &&
+                    !state.isAnswered)
+                  _ListenPrompt(
+                    langTag: question.direction.promptLangTag,
+                    text: question.prompt,
+                    onTap: () => _playPrompt(question),
+                  )
+                else
+                  _PromptCard(
+                    text: question.prompt,
+                    langTag: question.direction.promptLangTag,
+                  ),
+                if (state.usedJokersThisQuestion.contains(JokerType.ipa) ||
+                    state.usedJokersThisQuestion
+                        .contains(JokerType.audio)) ...[
+                  const SizedBox(height: 12),
+                  JokerReveals(
+                    question: question,
+                    usedJokers: state.usedJokersThisQuestion,
+                    onReplayAudio: () => _playCorrectAnswer(question),
+                  ),
+                ],
+              ],
+            );
+
+            final answerBlock = Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildAnswerArea(state, question),
+                if (state.isAnswered)
+                  _AnswerFeedback(state: state, question: question),
+              ],
+            );
+
+            final bottomControls = Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                JokerBar(
+                  question: question,
+                  format: widget.format,
+                  usedJokers: state.usedJokersThisQuestion,
+                  isAnswered: state.isAnswered,
+                  onUseJoker: (j) {
+                    ref
+                        .read(quizSessionControllerProvider(_args).notifier)
+                        .useJoker(j);
+                    if (j == JokerType.audio) {
+                      _playCorrectAnswer(question);
+                    }
+                  },
+                ),
+                if (state.isAnswered && state.wasLastCorrect == false) ...[
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    onPressed: () => _advance(),
+                    icon: const Icon(Icons.arrow_forward),
+                    label: const Text('Weiter'),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                ],
+              ],
+            );
+
+            final Widget scrollArea = isWide
+                ? _CenteredScrollable(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              progressHeader,
+                              const SizedBox(height: 16),
+                              promptBlock,
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 28),
+                        Expanded(child: answerBlock),
+                      ],
+                    ),
+                  )
+                : _CenteredScrollable(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        progressHeader,
+                        const SizedBox(height: 16),
+                        promptBlock,
+                        const SizedBox(height: 18),
+                        answerBlock,
+                      ],
+                    ),
+                  );
+
+            return Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: isWide ? 980.0 : kTabletMaxContentWidth,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      QuizProgressBar(
-                        total: state.totalQuestions,
-                        currentIndex: state.currentIndex,
-                        correctMask: _correctMask,
-                      ),
-                      const SizedBox(height: 8),
-                      Center(
-                        child: Text(
-                          'Frage ${state.currentIndex + 1} / ${state.totalQuestions}',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      if (widget.format == QuizFormat.listenSpeak &&
-                          !state.isAnswered)
-                        _ListenPrompt(
-                          langTag: question.direction.promptLangTag,
-                          text: question.prompt,
-                          onTap: () => _playPrompt(question),
-                        )
-                      else
-                        _PromptCard(
-                          text: question.prompt,
-                          langTag: question.direction.promptLangTag,
-                        ),
-                      if (state.usedJokersThisQuestion
-                              .contains(JokerType.ipa) ||
-                          state.usedJokersThisQuestion
-                              .contains(JokerType.audio)) ...[
-                        const SizedBox(height: 12),
-                        JokerReveals(
-                          question: question,
-                          usedJokers: state.usedJokersThisQuestion,
-                          onReplayAudio: () => _playCorrectAnswer(question),
-                        ),
-                      ],
-                      const SizedBox(height: 18),
-                      _buildAnswerArea(state, question),
-                      if (state.isAnswered)
-                        _AnswerFeedback(state: state, question: question),
+                      Expanded(child: scrollArea),
+                      const SizedBox(height: 12),
+                      bottomControls,
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
-              JokerBar(
-                question: question,
-                format: widget.format,
-                usedJokers: state.usedJokersThisQuestion,
-                isAnswered: state.isAnswered,
-                onUseJoker: (j) {
-                  ref
-                      .read(quizSessionControllerProvider(_args).notifier)
-                      .useJoker(j);
-                  if (j == JokerType.audio) {
-                    _playCorrectAnswer(question);
-                  }
-                },
-              ),
-              if (state.isAnswered && state.wasLastCorrect == false) ...[
-                const SizedBox(height: 12),
-                FilledButton.icon(
-                  onPressed: () => _advance(),
-                  icon: const Icon(Icons.arrow_forward),
-                  label: const Text('Weiter'),
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
+            );
+          },
         ),
       ),
     );
@@ -397,6 +465,28 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
     if (exit == true && mounted) {
       navigator.pop();
     }
+  }
+}
+
+/// Scrollbarer Bereich, der seinen Inhalt vertikal zentriert, solange er in
+/// den sichtbaren Bereich passt, und erst bei Überlänge scrollt.
+class _CenteredScrollable extends StatelessWidget {
+  const _CenteredScrollable({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Center(child: child),
+          ),
+        );
+      },
+    );
   }
 }
 

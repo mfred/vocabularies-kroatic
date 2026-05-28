@@ -100,12 +100,20 @@ class _CompletedView extends StatelessWidget {
     final outcomeText = iWon ? 'Gewonnen!' : 'Verloren';
     final outcomeColor = iWon ? scheme.tertiary : scheme.error;
 
-    return TabletConstrained(
-      child: Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return TabletConstrained(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight - 40,
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
           const SizedBox(height: 8),
           Center(child: Text(outcomeEmoji, style: const TextStyle(fontSize: 64))),
           const SizedBox(height: 8),
@@ -153,9 +161,13 @@ class _CompletedView extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
           ),
-        ],
-      ),
-      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
