@@ -9,6 +9,11 @@ enum QuizFormat {
   final String code;
   final String label;
 
+  /// Sprech-Formate werten die Eingabe per Aussprache-Score (Levenshtein) aus,
+  /// nicht nur exakt/tolerant.
+  bool get isSpeech =>
+      this == QuizFormat.speak || this == QuizFormat.listenSpeak;
+
   static QuizFormat fromCode(String code) {
     for (final f in QuizFormat.values) {
       if (f.code == code) return f;

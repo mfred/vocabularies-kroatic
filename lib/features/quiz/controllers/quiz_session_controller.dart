@@ -84,6 +84,7 @@ class QuizSessionState {
     required this.startedAt,
     required this.elapsedSeconds,
     required this.isFinished,
+    this.pronunciationScore,
   });
 
   final String sessionId;
@@ -99,6 +100,10 @@ class QuizSessionState {
   final int startedAt;
   final int elapsedSeconds;
   final bool isFinished;
+
+  /// Ausspracheähnlichkeit [0.0, 1.0] der letzten Antwort — nur in den
+  /// Sprech-Formaten gesetzt, sonst null.
+  final double? pronunciationScore;
 
   bool get hasQuestions => questions.isNotEmpty;
   QuizQuestion? get current =>
@@ -122,6 +127,8 @@ class QuizSessionState {
     bool clearSpellingNotice = false,
     int? elapsedSeconds,
     bool? isFinished,
+    double? pronunciationScore,
+    bool clearPronunciationScore = false,
   }) {
     return QuizSessionState(
       sessionId: sessionId,
@@ -142,6 +149,9 @@ class QuizSessionState {
       startedAt: startedAt,
       elapsedSeconds: elapsedSeconds ?? this.elapsedSeconds,
       isFinished: isFinished ?? this.isFinished,
+      pronunciationScore: clearPronunciationScore
+          ? null
+          : (pronunciationScore ?? this.pronunciationScore),
     );
   }
 }
@@ -277,7 +287,8 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
     final question = current.current;
     if (question == null) return;
 
-    final eval = const AnswerEvaluator().evaluate(picked, question.correct);
+    final eval = const AnswerEvaluator()
+        .evaluate(picked, question.correct, fuzzy: _args.format.isSpeech);
     final wasCorrect = eval.isCorrect;
     final spellingNotice = eval.hasSpellingNotice ? question.correct : null;
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -308,6 +319,8 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
       wasLastCorrect: wasCorrect,
       spellingNotice: spellingNotice,
       clearSpellingNotice: spellingNotice == null,
+      pronunciationScore: eval.score,
+      clearPronunciationScore: eval.score == null,
       correctCount: current.correctCount + (wasCorrect ? 1 : 0),
     ));
   }
@@ -326,6 +339,7 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
       clearLockedAnswer: true,
       clearWasLastCorrect: true,
       clearSpellingNotice: true,
+      clearPronunciationScore: true,
       usedJokersThisQuestion: const {},
     ));
   }

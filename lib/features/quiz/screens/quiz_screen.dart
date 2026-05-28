@@ -689,6 +689,16 @@ class _AnswerFeedback extends StatelessWidget {
               ),
             ),
           ],
+          if (state.pronunciationScore != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Aussprache: ${(state.pronunciationScore! * 100).round()} %',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ],
       ),
     );
