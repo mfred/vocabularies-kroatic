@@ -72,7 +72,7 @@ class DailyQuizBuilder {
         prompt: _promptFor(item, direction),
         correct: correct,
         options: options,
-        ipaHint: _ipaFor(item, direction),
+        ipaHint: _ipaFor(item),
         isNewWord: false,
         direction: direction,
         difficulty: item.difficulty,
@@ -86,8 +86,10 @@ class DailyQuizBuilder {
   String _answerFor(Item item, QuizDirection direction) =>
       direction == QuizDirection.deToHr ? item.hrText : item.deText;
 
-  String? _ipaFor(Item item, QuizDirection direction) {
-    final ipa = direction == QuizDirection.deToHr ? item.hrIpa : item.deIpa;
+  /// Lautschrift-Joker zeigt immer die **kroatische** IPA — siehe Begründung
+  /// in QuizBuilder._ipaFor (deutsche IPA ist im Datensatz leer).
+  String? _ipaFor(Item item) {
+    final ipa = item.hrIpa;
     return (ipa == null || ipa.trim().isEmpty) ? null : ipa;
   }
 }

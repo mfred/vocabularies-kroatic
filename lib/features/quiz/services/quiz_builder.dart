@@ -70,7 +70,7 @@ class QuizBuilder {
         prompt: _promptFor(item, direction),
         correct: correct,
         options: options,
-        ipaHint: _ipaFor(item, direction),
+        ipaHint: _ipaFor(item),
         isNewWord: isNew,
         direction: direction,
         difficulty: item.difficulty,
@@ -78,9 +78,12 @@ class QuizBuilder {
     }).toList();
   }
 
-  String? _ipaFor(Item item, QuizDirection direction) {
-    final ipa =
-        direction == QuizDirection.deToHr ? item.hrIpa : item.deIpa;
+  /// Lautschrift-Joker zeigt immer die **kroatische** IPA. Der Datensatz
+  /// pflegt nur `hr.ipa` (deutsche IPA ist überall leer), und die kroatische
+  /// Aussprache ist in beiden Richtungen der sinnvolle Hinweis für deutsche
+  /// Lernende. Richtungsabhängig wäre der Joker in HR→DE sonst tot.
+  String? _ipaFor(Item item) {
+    final ipa = item.hrIpa;
     if (ipa == null || ipa.trim().isEmpty) return null;
     return ipa;
   }
