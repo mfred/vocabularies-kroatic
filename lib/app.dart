@@ -25,6 +25,9 @@ import 'shared/firebase_status.dart';
 import 'shared/providers.dart';
 import 'shared/widgets/tablet_constrained.dart';
 
+/// Markenfarbe als Seed für Light- und Dark-ColorScheme.
+const Color _kSeedColor = Color(0xFF1565C0);
+
 const Map<String, IconData> _topicIcons = {
   'greetings': Icons.waving_hand,
   'introduction': Icons.person_outline,
@@ -49,8 +52,18 @@ class VocabulariesApp extends StatelessWidget {
       title: 'Vokabeltrainer',
       theme: ThemeData(
         useMaterial3: true,
-        colorSchemeSeed: const Color(0xFF1565C0),
+        colorSchemeSeed: _kSeedColor,
       ),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: _kSeedColor,
+          brightness: Brightness.dark,
+        ),
+      ),
+      // Folgt der System-Einstellung — kein eigener In-App-Schalter, das OS
+      // regelt Hell/Dunkel.
+      themeMode: ThemeMode.system,
       home: const SplashGate(),
     );
   }
