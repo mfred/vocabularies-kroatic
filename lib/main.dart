@@ -15,14 +15,13 @@ import 'firebase_options.dart';
 import 'shared/firebase_status.dart';
 import 'shared/providers.dart';
 
-const Duration _kSplashMinHold = Duration(milliseconds: 1500);
-
 Future<void> main() async {
   final binding = WidgetsFlutterBinding.ensureInitialized();
-  // Splash bleibt sichtbar, bis wir ihn unten aktiv entfernen — sonst
-  // verschwindet er, sobald der erste Frame rendert (~200 ms).
+  // Native Splash (nur grüner Hintergrund) halten, bis Flutter den ersten
+  // Frame zeichnet. Das Logo zeigt danach der Flutter-Splash (SplashGate) —
+  // das native Splash-Icon rendert auf manchen Emulatoren (MEMU) nicht
+  // zuverlässig, v.a. im Querformat.
   FlutterNativeSplash.preserve(widgetsBinding: binding);
-  final startedAt = DateTime.now();
   await _tryInitFirebase();
   // Eine einzige DB-Instanz für die gesamte App. Frueher öffnete der
   // Reminder-Init eine zweite Connection auf dieselbe Datei — beim Kaltstart
@@ -36,12 +35,6 @@ Future<void> main() async {
       child: const VocabulariesApp(),
     ),
   );
-  final elapsed = DateTime.now().difference(startedAt);
-  final remaining = _kSplashMinHold - elapsed;
-  if (remaining > Duration.zero) {
-    await Future<void>.delayed(remaining);
-  }
-  FlutterNativeSplash.remove();
 }
 
 /// Plant nach Kaltstart den Abend-Reminder neu. Nutzt die geteilte

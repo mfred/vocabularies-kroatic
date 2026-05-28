@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/database/database.dart' hide StreakReward;
@@ -50,7 +51,66 @@ class VocabulariesApp extends StatelessWidget {
         useMaterial3: true,
         colorSchemeSeed: const Color(0xFF1565C0),
       ),
-      home: const SyncStatusScreen(),
+      home: const SplashGate(),
+    );
+  }
+}
+
+/// Wie lange der Flutter-Splash (mit Logo) nach dem ersten Frame sichtbar
+/// bleibt. Die App lädt darunter bereits, der Splash liegt nur als Overlay
+/// darüber — so startet der Sync sofort.
+const Duration _kSplashHold = Duration(milliseconds: 1400);
+
+/// Zeigt das Logo zuverlässig in jeder Orientierung — unabhängig davon, ob
+/// das native Android-12-Splash-Icon auf dem Emulator rendert. Liegt als
+/// Overlay über der bereits ladenden [SyncStatusScreen].
+class SplashGate extends StatefulWidget {
+  const SplashGate({super.key});
+
+  @override
+  State<SplashGate> createState() => _SplashGateState();
+}
+
+class _SplashGateState extends State<SplashGate> {
+  bool _showSplash = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FlutterNativeSplash.remove();
+    });
+    Future<void>.delayed(_kSplashHold, () {
+      if (mounted) setState(() => _showSplash = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        const SyncStatusScreen(),
+        if (_showSplash) const Positioned.fill(child: _SplashScreen()),
+      ],
+    );
+  }
+}
+
+class _SplashScreen extends StatelessWidget {
+  const _SplashScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    // Hintergrund exakt die Eckfarbe von logo_splash.png — so verschmilzt das
+    // grüne Bild-Quadrat nahtlos mit dem Rest des Screens.
+    return const ColoredBox(
+      color: Color(0xFF7AB28D),
+      child: Center(
+        child: Image(
+          image: AssetImage('assets/branding/logo_splash.png'),
+          width: 260,
+        ),
+      ),
     );
   }
 }
