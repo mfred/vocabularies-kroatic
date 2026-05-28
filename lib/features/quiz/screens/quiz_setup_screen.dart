@@ -180,16 +180,22 @@ class _QuizSetupScreenState extends ConsumerState<QuizSetupScreen> {
     for (var i = 0; i < formats.length; i += 2) {
       if (i > 0) rows.add(const SizedBox(height: 8));
       rows.add(
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(child: _formatTileFor(formats[i])),
-            const SizedBox(width: 8),
-            if (i + 1 < formats.length)
-              Expanded(child: _formatTileFor(formats[i + 1]))
-            else
-              const Expanded(child: SizedBox.shrink()),
-          ],
+        // IntrinsicHeight beschränkt die Querachse der Row, damit
+        // crossAxisAlignment.stretch in der (vertikal unbeschränkten)
+        // SingleChildScrollView gültig ist und beide Kacheln gleich hoch
+        // werden. Ohne das schlägt das Layout fehl -> Grid + Button leer.
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: _formatTileFor(formats[i])),
+              const SizedBox(width: 8),
+              if (i + 1 < formats.length)
+                Expanded(child: _formatTileFor(formats[i + 1]))
+              else
+                const Expanded(child: SizedBox.shrink()),
+            ],
+          ),
         ),
       );
     }
