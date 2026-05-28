@@ -10,7 +10,7 @@ bool jokerAvailable(
   switch (joker) {
     case JokerType.ipa:
       final ipa = question.ipaHint;
-      return ipa != null && ipa.isNotEmpty;
+      return ipa != null && ipa.trim().isNotEmpty;
     case JokerType.fiftyFifty:
       return format == QuizFormat.multipleChoice &&
           question.options.length >= 4;

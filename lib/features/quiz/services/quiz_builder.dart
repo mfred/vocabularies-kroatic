@@ -81,7 +81,7 @@ class QuizBuilder {
   String? _ipaFor(Item item, QuizDirection direction) {
     final ipa =
         direction == QuizDirection.deToHr ? item.hrIpa : item.deIpa;
-    if (ipa == null || ipa.isEmpty) return null;
+    if (ipa == null || ipa.trim().isEmpty) return null;
     return ipa;
   }
 

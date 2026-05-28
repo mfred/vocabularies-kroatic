@@ -105,55 +105,97 @@ class _QuizSetupScreenState extends ConsumerState<QuizSetupScreen> {
         ),
       ),
       body: SafeArea(
-        child: TabletConstrained(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _DirectionPicker(
-                  direction: direction,
-                  onChanged: (d) =>
-                      ref.read(preferredDirectionProvider.notifier).set(d),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth >= 600 &&
+                constraints.maxWidth > constraints.maxHeight;
+
+            final showBoost = ref
+                .watch(doublePointsActiveProvider)
+                .maybeWhen(data: (v) => v, orElse: () => false);
+
+            final startButton = FilledButton.icon(
+              onPressed: canStart ? () => _startQuiz(direction) : null,
+              icon: Icon(
+                widget.reviewMode ? Icons.refresh : Icons.play_arrow,
+              ),
+              label: Text(buttonLabel),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+            );
+
+            return TabletConstrained(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _DirectionPicker(
+                      direction: direction,
+                      onChanged: (d) =>
+                          ref.read(preferredDirectionProvider.notifier).set(d),
+                    ),
+                    const SizedBox(height: 12),
+                    if (showBoost) _DoublePointsBanner(),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Spiel wählen',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (isWide)
+                      _buildFormatGrid()
+                    else
+                      for (final f in QuizFormat.values) ...[
+                        _formatTileFor(f),
+                        const SizedBox(height: 8),
+                      ],
+                    const SizedBox(height: 24),
+                    startButton,
+                  ],
                 ),
-                const SizedBox(height: 12),
-                if (ref
-                        .watch(doublePointsActiveProvider)
-                        .maybeWhen(data: (v) => v, orElse: () => false))
-                  _DoublePointsBanner(),
-                const SizedBox(height: 8),
-                Text(
-                  'Spiel wählen',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                for (final f in QuizFormat.values) ...[
-                  _FormatTile(
-                    icon: _iconForFormat(f),
-                    label: f.label,
-                    selected: _format == f,
-                    onTap: () => setState(() => _format = f),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-                const SizedBox(height: 24),
-                FilledButton.icon(
-                  onPressed: canStart ? () => _startQuiz(direction) : null,
-                  icon: Icon(
-                    widget.reviewMode ? Icons.refresh : Icons.play_arrow,
-                  ),
-                  label: Text(buttonLabel),
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ),
+    );
+  }
+
+  Widget _formatTileFor(QuizFormat f) => _FormatTile(
+        icon: _iconForFormat(f),
+        label: f.label,
+        selected: _format == f,
+        onTap: () => setState(() => _format = f),
+      );
+
+  /// Querformat: die 4 Formate als 2×2-Grid. `QuizFormat.values` hat genau
+  /// vier Einträge, daher zwei Zeilen à zwei Kacheln.
+  Widget _buildFormatGrid() {
+    final formats = QuizFormat.values;
+    final rows = <Widget>[];
+    for (var i = 0; i < formats.length; i += 2) {
+      if (i > 0) rows.add(const SizedBox(height: 8));
+      rows.add(
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(child: _formatTileFor(formats[i])),
+            const SizedBox(width: 8),
+            if (i + 1 < formats.length)
+              Expanded(child: _formatTileFor(formats[i + 1]))
+            else
+              const Expanded(child: SizedBox.shrink()),
+          ],
+        ),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: rows,
     );
   }
 }

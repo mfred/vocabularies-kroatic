@@ -278,6 +278,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                       children: [
                         Expanded(
                           child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Expanded(
                                 child: _CenteredScrollable(
@@ -301,6 +302,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                         const SizedBox(width: 28),
                         Expanded(
                           child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Expanded(
                                 child: _CenteredScrollable(child: answerBlock),

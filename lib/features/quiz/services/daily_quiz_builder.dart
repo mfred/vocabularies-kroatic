@@ -88,6 +88,6 @@ class DailyQuizBuilder {
 
   String? _ipaFor(Item item, QuizDirection direction) {
     final ipa = direction == QuizDirection.deToHr ? item.hrIpa : item.deIpa;
-    return (ipa == null || ipa.isEmpty) ? null : ipa;
+    return (ipa == null || ipa.trim().isEmpty) ? null : ipa;
   }
 }
