@@ -33,6 +33,14 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Server-aggregierte Bestenliste (von der aggregateScore-Cloud-Function
+    // gepflegt). Öffentlich lesbar; Clients dürfen NICHT schreiben — nur das
+    // Admin-SDK der Function, das die Rules ohnehin umgeht.
+    match /leaderboard_totals/{uid} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Spieler-Profile für Freundes-Suche. Jeder Eingeloggte darf alle Profile
     // lesen (Suche per Email/Name/Code), aber nur sein eigenes anlegen/ändern.
     match /users/{uid} {

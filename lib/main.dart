@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -59,6 +60,15 @@ Future<void> _tryInitFirebase() async {
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
+    );
+    // App Check erschwert Zugriffe auf Firestore von außerhalb der echten App
+    // (das Vehikel für Score-/Duell-Manipulation per direktem SDK/REST-Call).
+    // Release: Play Integrity; Debug/Emulator: Debug-Provider (Token aus dem
+    // Logcat in der Firebase-Console registrieren). Enforcement wird erst in der
+    // Console aktiviert — bis dahin ist activate() rein additiv/nicht-brechend.
+    await FirebaseAppCheck.instance.activate(
+      androidProvider:
+          kReleaseMode ? AndroidProvider.playIntegrity : AndroidProvider.debug,
     );
     FirebaseStatus.instance.markReady();
   } catch (e) {

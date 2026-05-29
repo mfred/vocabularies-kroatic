@@ -7,6 +7,33 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Security — Iteration 64 (Code-Audit Tranche 4: Backend — App Check + Cloud-Functions-Gerüst)
+- **Firebase App Check** integriert (`firebase_app_check`): In `main.dart` nach
+  Firebase-Init aktiviert — Release via Play Integrity, Debug/Emulator via
+  Debug-Provider. Erschwert Zugriffe auf Firestore von außerhalb der echten App
+  (das Vehikel hinter den Score-/Duell-Manipulationen, M8). `activate()` ist rein
+  additiv/nicht-brechend; das **Enforcement** wird separat in der Firebase-Console
+  aktiviert (nach einem Release mit App Check + Registrierung der Emulator-Debug-
+  Tokens).
+- **Cloud-Functions-Gerüst** (`functions/`, Node 20, Functions v2) — deploybar,
+  aber noch nicht deployt; `firebase.json` um den `functions`-Block ergänzt:
+  - `aggregateScore` (onCreate `scores/{id}`): pflegt `leaderboard_totals/{uid}`
+    (Summe + Spielzahl) fort → der Client kann die „Ewig"-Bestenliste später in
+    O(50) lesen statt bis zu 2000 Score-Docs zu scannen (M9). Neue Rule:
+    `leaderboard_totals` öffentlich lesbar, client-seitig nicht schreibbar.
+  - `finalizeDuel` (onUpdate `duels/{id}`): leitet `winnerUid` server-autoritativ
+    aus den gemeldeten Zeiten ab (H3).
+  - Beide isoliert deploybar **ohne Client-Bruch** (neue/ungelesene Collection
+    bzw. identischer `winnerUid`). Deploy + Voraussetzungen (Blaze-Plan):
+    `functions/README.md`.
+- **Bewusst offen** (in `functions/README.md` dokumentiert): Client-Umstellung
+  auf `leaderboard_totals` + Zeitfenster-Buckets, Entfernen des client-gesetzten
+  `winnerUid` (+ Rule), und voll-server-autoritatives Scoring — letzteres
+  architektonisch groß, weil der Score von lokal-first State abhängt
+  (`pendingBonusPoints`, Streak-Saver, Doppel-Punkte nur in der Drift-DB).
+- Damit sind alle vier Audit-Tranchen abgeschlossen. Alle 84 Tests grün;
+  `flutter analyze` sauber.
+
 ### Security — Iteration 63 (Code-Audit Tranche 3: Firestore-Rules härten)
 ⚠️ Die Rule-Änderungen wirken erst nach `firebase deploy --only firestore:rules`.
 Sie sind bewusst kompatibel zum aktuell ausgelieferten Client gehalten.
