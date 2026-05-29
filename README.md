@@ -20,7 +20,7 @@ Die vollständige Konzept-, Architektur- und Build-Dokumentation steht in
 
 ## Status
 
-Produktiv — App **v1.0.62**, lauffähige Release-APK, 12 Lektionen mit ~1.622
+Produktiv — App **v1.0.63**, lauffähige Release-APK, 12 Lektionen mit ~1.622
 Items. Aktive Iterations-Entwicklung (siehe [PROJECT.md](./PROJECT.md) §12 und
 [CHANGELOG.md](./CHANGELOG.md)). Stand: 2026-05-29.
 

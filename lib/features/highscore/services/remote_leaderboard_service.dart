@@ -24,7 +24,10 @@ class RemoteLeaderboardService {
   /// übersprungen (Offline-first-Prinzip).
   Future<void> uploadSession(String sessionId) async {
     final user = _auth.currentUser;
-    if (user == null) return;
+    // Nur verifizierte Accounts dürfen in die globale Bestenliste schreiben —
+    // konsistent zum übrigen Double-Opt-In-Gating und zur Firestore-Rule
+    // (email_verified). Unverifizierte Wegwerf-Accounts bleiben draußen.
+    if (user == null || !user.emailVerified) return;
     final session = await _db.getQuizSession(sessionId);
     if (session == null || session.finishedAt == null) return;
     final data = {

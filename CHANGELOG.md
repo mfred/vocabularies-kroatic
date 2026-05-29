@@ -7,6 +7,34 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Security — Iteration 63 (Code-Audit Tranche 3: Firestore-Rules härten)
+⚠️ Die Rule-Änderungen wirken erst nach `firebase deploy --only firestore:rules`.
+Sie sind bewusst kompatibel zum aktuell ausgelieferten Client gehalten.
+- **Score-Bounds** (`scores`-create): Konsistenz-/Plausibilitäts-Prüfungen
+  (`correctCount <= totalCount`, `0 < totalCount <= 100`, `durationMs/hintsUsed
+  >= 0`, `displayName` ≤ 64 Zeichen, `scorePoints`-Sanity-Cap). Zusätzlich muss
+  der Schreibende **verifiziert** sein (`request.auth.token.email_verified`), und
+  der Client lädt Scores nur noch bei `user.emailVerified == true` hoch (M7) —
+  schließt unverifizierte Wegwerf-Accounts aus der Bestenliste aus. Eine Rule
+  kann den Score allerdings nicht autoritativ nachrechnen; volle Cheat-Sicherheit
+  folgt server-seitig in Iter 64.
+- **Duell-Integrität** (`duels`): kontrollierte Status-Übergänge
+  (pending→accepted/declined, accepted→completed), abgeschlossene Duelle sind
+  final (kein Re-Submit), `winnerUid` muss einer der beiden Beteiligten sein, und
+  neue Duelle dürfen nur an **bestätigte Freunde** gehen (Friendship-`exists()`-
+  Check → kein Duell-Spam an Fremde per Nicht-App-Client). Die vollständige
+  server-autoritative Gewinner-Ableitung (statt client-gesetztem `winnerUid`)
+  folgt mit der Cloud Function in Iter 64.
+- **Bewusst auf Iter 64 / Folge verschoben** (nicht ungetestet mitgeliefert):
+  E-Mail-PII (M4) — `users/{uid}` ist für jeden Eingeloggten lesbar und enthält
+  die Klartext-E-Mail. Der saubere Fix (E-Mail aus dem öffentlichen Doc entfernen
+  + nicht-enumerierbare `emailIndex/{sha256(email)}`-Lookup-Collection für die
+  E-Mail-Suche) ist eine Datenmodell-Umstellung, die vor dem Prod-Deploy mit dem
+  Firestore-Rules-Emulator verifiziert werden sollte. Ebenso die client-seitige
+  displayName-Auflösung aus dem vertrauenswürdigen Profil — wird in Iter 64 durch
+  den server-gesetzten Namen ohnehin obsolet.
+- Alle 84 Tests grün; `flutter analyze` sauber.
+
 ### Changed — Iteration 62 (Code-Audit Tranche 2: Cleanups + Performance)
 Zweite Audit-Tranche — Wartbarkeit, Aufräumen, kleinere Performance:
 - **Toter Code entfernt**: DB-Methoden `countItemsByLesson`, `topSessions`,

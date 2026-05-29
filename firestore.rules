@@ -1,21 +1,34 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Globale Bestenliste — jeder kann lesen, jeder Eingeloggte schreibt
-    // nur seinen eigenen Score (uid muss passen). Keine Edits / Deletes.
+    // Globale Bestenliste — jeder kann lesen, jeder VERIFIZIERTE Eingeloggte
+    // schreibt nur seinen eigenen Score (uid muss passen). Keine Edits/Deletes.
+    // Plausibilitäts-Bounds wehren grob unsinnige Werte ab; die echte Score-
+    // Integrität (server-autoritative Neuberechnung) kommt mit der Cloud
+    // Function in Iter 64 — eine Rule kann den Score nicht selbst nachrechnen.
     match /scores/{sessionId} {
       allow read: if true;
       allow create: if request.auth != null
+        && request.auth.token.email_verified == true
         && request.auth.uid == request.resource.data.uid
         && request.resource.data.scorePoints is int
         && request.resource.data.scorePoints >= 0
+        && request.resource.data.scorePoints <= 1000000
         && request.resource.data.lessonId is string
         && request.resource.data.direction is string
         && request.resource.data.format is string
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 64
         && request.resource.data.correctCount is int
+        && request.resource.data.correctCount >= 0
         && request.resource.data.totalCount is int
+        && request.resource.data.totalCount > 0
+        && request.resource.data.totalCount <= 100
+        && request.resource.data.correctCount <= request.resource.data.totalCount
         && request.resource.data.durationMs is int
+        && request.resource.data.durationMs >= 0
         && request.resource.data.hintsUsed is int
+        && request.resource.data.hintsUsed >= 0
         && request.resource.data.finishedAt is timestamp;
       allow update, delete: if false;
     }
@@ -82,22 +95,42 @@ service cloud.firestore {
       allow read: if request.auth != null
         && (resource.data.challengerUid == request.auth.uid
             || resource.data.opponentUid == request.auth.uid);
-      // Challenger erstellt das Doc mit komplettem Set + eigenem Ergebnis.
+      // Challenger erstellt das Doc mit komplettem Set + eigenem Ergebnis —
+      // nur an einen bestätigten Freund (verhindert Duell-Spam an beliebige
+      // uids per Nicht-App-Client). pairKey ist sortiert, daher beide
+      // Reihenfolgen prüfen.
       allow create: if request.auth != null
         && request.resource.data.challengerUid == request.auth.uid
         && request.resource.data.opponentUid is string
         && request.resource.data.opponentUid != request.auth.uid
         && request.resource.data.status == 'pending'
         && request.resource.data.rounds is list
-        && request.resource.data.challengerResult is map;
-      // Updates: nur Opponent darf accept/decline/submit. Schreibgeschützte
-      // Felder bleiben unverändert.
+        && request.resource.data.challengerResult is map
+        && (
+          exists(/databases/$(database)/documents/friendships/$(request.auth.uid + '_' + request.resource.data.opponentUid))
+          || exists(/databases/$(database)/documents/friendships/$(request.resource.data.opponentUid + '_' + request.auth.uid))
+        );
+      // Updates: nur der Opponent; Kernfelder unveränderlich; kontrollierte
+      // Status-Übergänge; abgeschlossene Duelle sind final; winnerUid muss
+      // einer der beiden Beteiligten sein. (Vollständiger Anti-Cheat — server-
+      // seitige Gewinner-Ableitung statt client-gesetztem winnerUid — folgt mit
+      // der Cloud Function in Iter 64; opponentResult.totalMs bleibt bis dahin
+      // clientseitig gemessen und damit theoretisch fälschbar.)
       allow update: if request.auth != null
         && resource.data.opponentUid == request.auth.uid
         && request.resource.data.challengerUid == resource.data.challengerUid
         && request.resource.data.opponentUid == resource.data.opponentUid
         && request.resource.data.rounds == resource.data.rounds
-        && request.resource.data.challengerResult == resource.data.challengerResult;
+        && request.resource.data.challengerResult == resource.data.challengerResult
+        && resource.data.status != 'completed'
+        && (
+          (resource.data.status == 'pending'
+            && request.resource.data.status in ['accepted', 'declined'])
+          || (resource.data.status == 'accepted'
+            && request.resource.data.status == 'completed'
+            && request.resource.data.opponentResult is map
+            && request.resource.data.winnerUid in [resource.data.challengerUid, resource.data.opponentUid])
+        );
       allow delete: if false;
     }
   }
