@@ -56,8 +56,17 @@ class ManifestSyncService {
           continue;
         }
         _log.i('Lade Lektion ${lesson.id} v${lesson.version}');
-        final lessonResp = await _dio.get<dynamic>(lesson.file);
-        final raw = _rawBytes(lessonResp);
+        // Body als rohe Bytes anfordern (ResponseType.bytes), damit Dio das
+        // JSON NICHT decodiert. Der SHA-256 wird so über exakt die vom Server
+        // gelieferten Bytes berechnet und stimmt unabhängig vom Content-Type
+        // (text/plain vs. application/json) mit dem Manifest-Hash überein.
+        // Früher re-serialisierte der Map-Pfad das JSON, was die Prüfung bei
+        // application/json wertlos/fehlschlagend machte.
+        final lessonResp = await _dio.get<List<int>>(
+          lesson.file,
+          options: Options(responseType: ResponseType.bytes),
+        );
+        final raw = lessonResp.data ?? const <int>[];
         final expectedSha = lesson.sha256.toLowerCase();
         final actualSha = sha256.convert(raw).toString();
         if (actualSha != expectedSha) {
@@ -164,13 +173,5 @@ class ManifestSyncService {
     if (data is Map<String, dynamic>) return data;
     if (data is String) return jsonDecode(data) as Map<String, dynamic>;
     throw StateError('Manifest response unexpected type: ${data.runtimeType}');
-  }
-
-  List<int> _rawBytes(Response<dynamic> resp) {
-    final data = resp.data;
-    if (data is List<int>) return data;
-    if (data is String) return utf8.encode(data);
-    if (data is Map) return utf8.encode(jsonEncode(data));
-    throw StateError('Lesson response unexpected type: ${data.runtimeType}');
   }
 }

@@ -7,6 +7,43 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Fixed — Iteration 61 (Code-Audit Tranche 1: Quick-Wins, Korrektheit & Robustheit)
+Erste Tranche aus dem ganzheitlichen Code-Audit (Performance/Cleanup/Security) —
+risikoarme, rein clientseitige Korrekturen:
+- **Summary-Score korrekt**: Der Abschluss-Screen berechnete den Punktwert über
+  `computeScore` neu und kannte dabei die Boni nicht (pendingBonus, Doppel-Punkte,
+  Daily-Multiplikatoren) — er wich also von DB/Bestenliste nach unten ab. Der final
+  gewertete Score liegt jetzt in `QuizSessionState.finalScore` und wird unverändert
+  angezeigt.
+- **Streak-Schoner robust**: `currentStreak()` ist jetzt rein lesend/idempotent; der
+  tatsächliche Verbrauch wird über `settleStreakSavers()` nur noch nach einem
+  abgeschlossenen Quiz und höchstens einmal pro Kalendertag persistiert (neue Spalte
+  `players.lastSaverConsumedDayKey`, Schema **v9**). Vorher verbrannte bereits ein
+  Kaltstart-Read (Reminder-Reschedule) still einen Schoner und zwei Reads konnten
+  widersprüchliche Werte liefern.
+- **Mikrofon-Leak**: `QuizMicInput` bricht eine laufende Spracherkennung jetzt im
+  `dispose()` ab (`SttService.cancel()`) — vorher blieb das Mikro nach Quiz-Abbruch/
+  -Ende bis zum `listenFor/pauseFor`-Timeout aktiv.
+- **Doppel-Submit**: `QuizSessionController.answer()` hat einen synchronen
+  Re-Entrancy-Guard; ein schnelles Enter+Senden-Tap kann keinen doppelten
+  `quiz_attempts`-Eintrag mehr schreiben (verfälschte vorher `correctCount` und die
+  gefaltete SM-2-Historie).
+- **E-Mail-Suche**: `ensureProfile` speichert die E-Mail jetzt klein (`toLowerCase()`),
+  passend zur `searchByEmail`-Abfrage — vorher fand die Suche Nutzer mit
+  Großbuchstaben in der Adresse nie. Bestandsprofile heilen sich beim nächsten Login.
+- **Lektions-Integrität**: Der SHA-256 wird über die rohen Antwort-Bytes geprüft
+  (`ResponseType.bytes`) statt über re-serialisiertes JSON — robust gegen einen
+  `application/json`-Content-Type (sonst schlug die Prüfung bei validem Inhalt fehl
+  und der Sync fiel dauerhaft auf den Cache zurück). Der tote `_rawBytes`-Map-Pfad
+  entfällt.
+- **False Positive entschärft**: Der im Audit als „kaputt" gemeldete
+  `searchByNamePrefix` ist korrekt — die obere Range-Grenze nutzt bereits einen
+  U+F8FF-Präfix-Sentinel, der in Editoren/Diff-Tools unsichtbar ist (nur `cat -A`
+  zeigt ihn) und alle Lese-/Audit-Tools täuschte. Ein Code-Kommentar warnt nun
+  davor, ihn zu „korrigieren".
+- Tests: neuer `streak_savers_settle_test` (Idempotenz + Read-Only-Garantie). Alle
+  84 Tests grün.
+
 ### Added — Iteration 60 (Aktivitäts-Heatmap im Profil)
 - Neue Karte „Aktivität" im Profil: eine GitHub-artige Heatmap der letzten 13
   Wochen, gefaltet aus derselben Session-Historie wie der Streak

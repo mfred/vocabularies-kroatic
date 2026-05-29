@@ -20,7 +20,9 @@ Die vollständige Konzept-, Architektur- und Build-Dokumentation steht in
 
 ## Status
 
-Greenfield / Planungsphase. Stand: 2026-05-16.
+Produktiv — App **v1.0.61**, lauffähige Release-APK, 12 Lektionen mit ~1.622
+Items. Aktive Iterations-Entwicklung (siehe [PROJECT.md](./PROJECT.md) §12 und
+[CHANGELOG.md](./CHANGELOG.md)). Stand: 2026-05-29.
 
 ## Daten-Repository
 

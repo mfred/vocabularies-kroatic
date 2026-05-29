@@ -91,11 +91,11 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
             totalCount: state.totalQuestions,
             durationSeconds: state.elapsedSeconds,
             hintsUsed: state.jokersUsedTotal,
-            score: computeScore(
-              correctCount: state.correctCount,
-              durationSeconds: state.elapsedSeconds,
-              jokerCost: state.jokerCostTotal,
-            ),
+            // Den in _finish() gewerteten und persistierten Score anzeigen
+            // (inkl. Boni) — NICHT neu rechnen: computeScore kennt pendingBonus,
+            // Doppel-Punkte und Daily-Multiplikatoren nicht und zeigte sonst
+            // einen zu niedrigen, von DB/Leaderboard abweichenden Wert.
+            score: state.finalScore,
             onRetry: () {
               _advanceTimer?.cancel();
               setState(_correctMask.clear);

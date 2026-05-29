@@ -85,6 +85,7 @@ class QuizSessionState {
     required this.elapsedSeconds,
     required this.isFinished,
     this.pronunciationScore,
+    this.finalScore = 0,
   });
 
   final String sessionId;
@@ -104,6 +105,12 @@ class QuizSessionState {
   /// Ausspracheähnlichkeit [0.0, 1.0] der letzten Antwort — nur in den
   /// Sprech-Formaten gesetzt, sonst null.
   final double? pronunciationScore;
+
+  /// Der final gewertete Score dieser Session inkl. aller Boni (pendingBonus,
+  /// Doppel-Punkte, Daily-Multiplikatoren). Wird in [_finish] gesetzt und vom
+  /// Summary-Screen angezeigt — identisch zum in DB/Leaderboard gespeicherten
+  /// Wert. 0, solange die Session noch läuft.
+  final int finalScore;
 
   bool get hasQuestions => questions.isNotEmpty;
   QuizQuestion? get current =>
@@ -129,6 +136,7 @@ class QuizSessionState {
     bool? isFinished,
     double? pronunciationScore,
     bool clearPronunciationScore = false,
+    int? finalScore,
   }) {
     return QuizSessionState(
       sessionId: sessionId,
@@ -152,6 +160,7 @@ class QuizSessionState {
       pronunciationScore: clearPronunciationScore
           ? null
           : (pronunciationScore ?? this.pronunciationScore),
+      finalScore: finalScore ?? this.finalScore,
     );
   }
 }
@@ -174,6 +183,12 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
   Timer? _ticker;
   int _questionStartMs = 0;
   final Uuid _uuid = const Uuid();
+
+  /// Synchroner Re-Entrancy-Guard für [answer]: zwischen dem isAnswered-Check
+  /// und dem finalen State-Update liegt ein await (DB-Insert). Ohne diesen
+  /// Guard könnten zwei schnelle Submits (Enter + Senden-Button) beide passieren
+  /// und einen doppelten Attempt schreiben → verfälscht correctCount & SM-2.
+  bool _answerInFlight = false;
 
   /// Heutiges Daily-Assignment des Spielers — wird in `build()` zwischen-
   /// gespeichert, damit `_finish()` denselben Bonus anwenden kann (statt
@@ -283,54 +298,58 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
 
   Future<void> answer(String picked) async {
     final current = state.value;
-    if (current == null || current.isAnswered) return;
+    if (current == null || current.isAnswered || _answerInFlight) return;
     final question = current.current;
     if (question == null) return;
+    _answerInFlight = true;
+    try {
+      // Multiple Choice bleibt strikt (exakte Option) — Diakritika-Toleranz nur
+      // bei Freitext (Schreiben/Sprechen), sonst könnte eine nur-diakritisch
+      // abweichende falsche Option als richtig zählen.
+      final isMc = _args.format == QuizFormat.multipleChoice;
+      final eval = const AnswerEvaluator().evaluate(
+        picked,
+        question.correct,
+        tolerant: !isMc,
+        fuzzy: _args.format.isSpeech,
+      );
+      final wasCorrect = eval.isCorrect;
+      final spellingNotice = eval.hasSpellingNotice ? question.correct : null;
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final responseMs = now - _questionStartMs;
 
-    // Multiple Choice bleibt strikt (exakte Option) — Diakritika-Toleranz nur
-    // bei Freitext (Schreiben/Sprechen), sonst könnte eine nur-diakritisch
-    // abweichende falsche Option als richtig zählen.
-    final isMc = _args.format == QuizFormat.multipleChoice;
-    final eval = const AnswerEvaluator().evaluate(
-      picked,
-      question.correct,
-      tolerant: !isMc,
-      fuzzy: _args.format.isSpeech,
-    );
-    final wasCorrect = eval.isCorrect;
-    final spellingNotice = eval.hasSpellingNotice ? question.correct : null;
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final responseMs = now - _questionStartMs;
+      final db = ref.read(databaseProvider);
+      final usedJokers = current.usedJokersThisQuestion;
+      final jokersJson = usedJokers.isEmpty
+          ? null
+          : jsonEncode(usedJokers.map((j) => j.code).toList());
+      await db.insertQuizAttempt(
+        QuizAttemptsCompanion.insert(
+          id: _uuid.v4(),
+          sessionId: current.sessionId,
+          itemId: question.itemId,
+          questionOrder: current.currentIndex,
+          wasCorrect: wasCorrect,
+          hintUsed: Value(usedJokers.isNotEmpty),
+          responseMs: responseMs,
+          pickedOption: Value(picked),
+          jokersJson: Value(jokersJson),
+          answeredAt: now,
+        ),
+      );
 
-    final db = ref.read(databaseProvider);
-    final usedJokers = current.usedJokersThisQuestion;
-    final jokersJson = usedJokers.isEmpty
-        ? null
-        : jsonEncode(usedJokers.map((j) => j.code).toList());
-    await db.insertQuizAttempt(
-      QuizAttemptsCompanion.insert(
-        id: _uuid.v4(),
-        sessionId: current.sessionId,
-        itemId: question.itemId,
-        questionOrder: current.currentIndex,
-        wasCorrect: wasCorrect,
-        hintUsed: Value(usedJokers.isNotEmpty),
-        responseMs: responseMs,
-        pickedOption: Value(picked),
-        jokersJson: Value(jokersJson),
-        answeredAt: now,
-      ),
-    );
-
-    state = AsyncData(current.copyWith(
-      lockedAnswer: picked,
-      wasLastCorrect: wasCorrect,
-      spellingNotice: spellingNotice,
-      clearSpellingNotice: spellingNotice == null,
-      pronunciationScore: eval.score,
-      clearPronunciationScore: eval.score == null,
-      correctCount: current.correctCount + (wasCorrect ? 1 : 0),
-    ));
+      state = AsyncData(current.copyWith(
+        lockedAnswer: picked,
+        wasLastCorrect: wasCorrect,
+        spellingNotice: spellingNotice,
+        clearSpellingNotice: spellingNotice == null,
+        pronunciationScore: eval.score,
+        clearPronunciationScore: eval.score == null,
+        correctCount: current.correctCount + (wasCorrect ? 1 : 0),
+      ));
+    } finally {
+      _answerInFlight = false;
+    }
   }
 
   Future<void> advance() async {
@@ -425,9 +444,14 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
     final reminder = ref.read(reminderServiceProvider);
     unawaited(reminder.requestPermissionIfNeeded());
     unawaited(reminder.rescheduleReminder(player.id));
+    // Saver-Verbrauch jetzt idempotent persistieren — bewusst NICHT beim
+    // bloßen Lesen des Streaks (currentStreak), sonst würde ein Kaltstart-Read
+    // (Reminder-Reschedule) einen Schoner still verbrennen.
+    await ref.read(streakServiceProvider).settleStreakSavers(player.id);
     state = AsyncData(current.copyWith(
       isFinished: true,
       elapsedSeconds: durationSeconds,
+      finalScore: finalScore,
     ));
     // Streak könnte sich nach Session geändert haben (neuer Tag).
     ref.invalidate(currentStreakProvider);

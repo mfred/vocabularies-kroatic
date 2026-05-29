@@ -23,7 +23,10 @@ class UserProfileService {
     final displayName = (user.displayName ?? '').trim().isNotEmpty
         ? user.displayName!.trim()
         : (user.email ?? 'Spieler').split('@').first;
-    final email = user.email ?? '';
+    // E-Mail normalisiert (lowercase) speichern — searchByEmail sucht ebenfalls
+    // mit toLowerCase(); ohne Normalisierung schlägt die Suche bei Adressen mit
+    // Großbuchstaben fehl. displayName bleibt davon unberührt (Original-Casing).
+    final email = (user.email ?? '').toLowerCase();
 
     if (!snap.exists) {
       final friendCode = await _generateUniqueFriendCode();
@@ -112,6 +115,11 @@ class UserProfileService {
   Future<List<UserProfile>> searchByNamePrefix(String prefix) async {
     final lower = prefix.trim().toLowerCase();
     if (lower.length < 3) return const [];
+    // ACHTUNG: Die obere Range-Grenze unten ist '$lower' + U+F8FF. Der
+    // U+F8FF-Sentinel ist in den meisten Editoren/Diff-Tools UNSICHTBAR,
+    // sieht also aus wie '$lower' (== untere Grenze). Er sortiert hinter alle
+    // mit `lower` beginnenden Strings, sodass der Range alle Präfix-Treffer
+    // erfasst. NICHT entfernen — ohne den Sentinel wäre das Intervall leer.
     final snap = await _users
         .where('displayNameLower', isGreaterThanOrEqualTo: lower)
         .where('displayNameLower', isLessThan: '$lower')

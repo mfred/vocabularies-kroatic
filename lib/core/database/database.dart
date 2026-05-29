@@ -63,6 +63,11 @@ class Players extends Table {
   BoolColumn get reminderEnabled =>
       boolean().withDefault(const Constant(true))();
 
+  /// Tagesschlüssel (yyyymmdd) des letzten Streak-Schoner-Verbrauchs.
+  /// Verhindert, dass mehrere Sessions am selben Tag denselben Schoner doppelt
+  /// abziehen (Idempotenz von [StreakService.settleStreakSavers]).
+  IntColumn get lastSaverConsumedDayKey => integer().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -138,7 +143,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -183,6 +188,9 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 8) {
             await m.addColumn(players, players.reminderEnabled);
+          }
+          if (from < 9) {
+            await m.addColumn(players, players.lastSaverConsumedDayKey);
           }
         },
       );
@@ -552,6 +560,18 @@ GROUP BY items.lesson_id
       'WHERE id = ?',
       [count, playerId],
     );
+  }
+
+  /// Tagesschlüssel (yyyymmdd) des letzten Saver-Verbrauchs, oder null.
+  Future<int?> getLastSaverConsumedDayKey(String playerId) async {
+    final row = await (select(players)..where((t) => t.id.equals(playerId)))
+        .getSingleOrNull();
+    return row?.lastSaverConsumedDayKey;
+  }
+
+  Future<void> setLastSaverConsumedDayKey(String playerId, int dayKey) async {
+    await (update(players)..where((t) => t.id.equals(playerId)))
+        .write(PlayersCompanion(lastSaverConsumedDayKey: Value(dayKey)));
   }
 
   Future<int> getDoublePointsRemaining(String playerId) async {

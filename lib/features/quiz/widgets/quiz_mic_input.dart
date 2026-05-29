@@ -26,6 +26,17 @@ class _QuizMicInputState extends ConsumerState<QuizMicInput> {
   String _liveTranscript = '';
   String? _error;
 
+  @override
+  void dispose() {
+    // Laufende Spracherkennung beim Verlassen hart abbrechen: cancel() statt
+    // stop() — kein onSubmit-Seiteneffekt beim Verlassen. Ohne dispose() bliebe
+    // die einzige SttService-Session (kein autoDispose) bis zum listenFor/
+    // pauseFor-Timeout aktiv und belegte das Mikrofon weiter. cancel() ist
+    // intern gegen „nicht aktiv" abgesichert.
+    ref.read(sttServiceProvider).cancel();
+    super.dispose();
+  }
+
   Future<void> _toggle() async {
     final svc = ref.read(sttServiceProvider);
     if (_listening) {

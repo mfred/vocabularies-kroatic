@@ -12,20 +12,38 @@ class StreakService {
   final AppDatabase _db;
   final DateTime Function() _clock;
 
-  /// Liefert den aktuellen Streak inkl. ggf. konsumierter Schoner.
-  /// Wenn ein Schoner verbraucht wurde, persistiert die Service-Methode
-  /// das im Player-Datensatz.
+  /// Liefert den aktuellen Streak inkl. ggf. durch Schoner überbrückter Tage.
+  /// REIN LESEND und idempotent — der tatsächliche Schoner-Verbrauch wird hier
+  /// NICHT persistiert (das übernimmt [settleStreakSavers] nach einem
+  /// abgeschlossenen Quiz). Früher konsumierte diese Methode Schoner direkt,
+  /// wodurch ein Hintergrund-/Kaltstart-Read (Reminder-Reschedule) sie still
+  /// verbrannte und zwei aufeinanderfolgende Reads inkonsistente Werte lieferten.
   Future<int> currentStreak(String playerId) async {
     final timestamps = await _db.finishedAtsForPlayer(playerId);
     final savers = await _db.getStreakSavers(playerId);
-    final natural = _computeCurrentStreak(timestamps, _clock(), 0);
-    if (savers == 0) return natural.streak;
-    final withSavers = _computeCurrentStreak(timestamps, _clock(), savers);
-    final consumed = (withSavers.consumed).clamp(0, savers);
-    if (consumed > 0) {
-      await _db.consumeStreakSavers(playerId, consumed);
-    }
-    return withSavers.streak;
+    return _computeCurrentStreak(timestamps, _clock(), savers).streak;
+  }
+
+  /// Persistiert den tatsächlichen Schoner-Verbrauch des aktuellen Streaks —
+  /// höchstens einmal pro Kalendertag. Wird ausschließlich nach einem
+  /// abgeschlossenen Quiz aufgerufen, nie beim bloßen Lesen.
+  ///
+  /// Idempotenz: Der Tagesschlüssel in [Players.lastSaverConsumedDayKey]
+  /// verhindert, dass mehrere Sessions am selben Tag denselben Schoner doppelt
+  /// abziehen. Über Tage hinweg verhindert das schrittweise Reduzieren des
+  /// Reservoirs, dass dieselbe (bereits bezahlte) Lücke erneut bezahlt wird.
+  Future<void> settleStreakSavers(String playerId) async {
+    final savers = await _db.getStreakSavers(playerId);
+    if (savers == 0) return;
+    final timestamps = await _db.finishedAtsForPlayer(playerId);
+    final consumed = _computeCurrentStreak(timestamps, _clock(), savers)
+        .consumed
+        .clamp(0, savers);
+    if (consumed <= 0) return;
+    final todayKey = _dayKey(_clock());
+    if (await _db.getLastSaverConsumedDayKey(playerId) == todayKey) return;
+    await _db.consumeStreakSavers(playerId, consumed);
+    await _db.setLastSaverConsumedDayKey(playerId, todayKey);
   }
 
   Future<int> longestStreak(String playerId) async {
