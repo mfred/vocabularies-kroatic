@@ -66,7 +66,7 @@ class DuelPlayController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Ein Drag wurde verworfen / falsch abgelegt → +200 ms.
+  /// Ein Drag wurde verworfen / falsch abgelegt → Strafzeit += [kDuelPenaltyMs].
   void registerIncorrectAttempt() {
     if (_phase != DuelPhase.playing) return;
     _penaltyMs += kDuelPenaltyMs;

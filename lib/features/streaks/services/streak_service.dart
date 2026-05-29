@@ -1,4 +1,5 @@
 import '../../../core/database/database.dart' hide StreakReward;
+import '../../../core/utils/date_key.dart';
 import '../models/streak_reward.dart';
 
 /// Max. wie viele Streak-Schoner gleichzeitig im Reservoir liegen dürfen.
@@ -40,7 +41,7 @@ class StreakService {
         .consumed
         .clamp(0, savers);
     if (consumed <= 0) return;
-    final todayKey = _dayKey(_clock());
+    final todayKey = dayKey(_clock());
     if (await _db.getLastSaverConsumedDayKey(playerId) == todayKey) return;
     await _db.consumeStreakSavers(playerId, consumed);
     await _db.setLastSaverConsumedDayKey(playerId, todayKey);
@@ -97,12 +98,10 @@ class StreakWithConsumption {
   final int consumed;
 }
 
-int _dayKey(DateTime t) => t.year * 10000 + t.month * 100 + t.day;
-
 Set<int> _distinctDayKeys(List<int> finishedAtsMs) {
   final out = <int>{};
   for (final ms in finishedAtsMs) {
-    out.add(_dayKey(DateTime.fromMillisecondsSinceEpoch(ms)));
+    out.add(dayKey(DateTime.fromMillisecondsSinceEpoch(ms)));
   }
   return out;
 }
@@ -120,9 +119,9 @@ StreakWithConsumption _computeCurrentStreak(
   var consumed = 0;
   // Toleranz für „heute noch nicht gespielt": gestern darf auch zählen,
   // sonst bricht jeder Streak ab Mitternacht.
-  if (!days.contains(_dayKey(cursor))) {
+  if (!days.contains(dayKey(cursor))) {
     cursor = DateTime(cursor.year, cursor.month, cursor.day - 1);
-    if (!days.contains(_dayKey(cursor))) {
+    if (!days.contains(dayKey(cursor))) {
       // Auch gestern leer — versuche Saver einzusetzen.
       if (savers <= 0) return const StreakWithConsumption(0, 0);
       // Saver kann die heutige Lücke decken; wir starten ab gestern
@@ -132,7 +131,7 @@ StreakWithConsumption _computeCurrentStreak(
       // Saver wirkt für genau einen Tag — falls auch vorgestern leer ist,
       // hat der Saver nichts zu retten.
       cursor = DateTime(cursor.year, cursor.month, cursor.day - 1);
-      if (!days.contains(_dayKey(cursor))) {
+      if (!days.contains(dayKey(cursor))) {
         return const StreakWithConsumption(0, 0);
       }
       savers--;
@@ -141,7 +140,7 @@ StreakWithConsumption _computeCurrentStreak(
   }
   var streak = 0;
   while (true) {
-    if (days.contains(_dayKey(cursor))) {
+    if (days.contains(dayKey(cursor))) {
       streak++;
       cursor = DateTime(cursor.year, cursor.month, cursor.day - 1);
       continue;
@@ -152,7 +151,7 @@ StreakWithConsumption _computeCurrentStreak(
       savers--;
       consumed++;
       cursor = DateTime(cursor.year, cursor.month, cursor.day - 1);
-      if (!days.contains(_dayKey(cursor))) {
+      if (!days.contains(dayKey(cursor))) {
         // Hinter dem Saver-gedeckten Tag steckt schon wieder eine Lücke
         // — kein weiterer Save mehr für direkt-aneinander, abbrechen.
         break;

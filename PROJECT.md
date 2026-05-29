@@ -4,7 +4,7 @@
 > und Aussprachebewertung. Fokus auf praxistauglichem Reise-Wortschatz.
 > Endprodukt: native Android-App (APK) auf Basis von Flutter.
 
-**Status:** Produktiv — App **v1.0.61**, lauffähige Release-APK, 12 Lektionen mit
+**Status:** Produktiv — App **v1.0.62**, lauffähige Release-APK, 12 Lektionen mit
 ~1.622 Items. Roadmap-Phasen 1–3 weitgehend umgesetzt, zahlreiche Features darüber
 hinaus geliefert (siehe §12). Stand 2026-05-29.
 
@@ -744,7 +744,7 @@ flutter build apk --release
 
 ## 12. Roadmap
 
-> **Umsetzungsstand (Iteration 61, 2026-05-29):** Phasen 1–3 sind weitgehend
+> **Umsetzungsstand (Iteration 62, 2026-05-29):** Phasen 1–3 sind weitgehend
 > umgesetzt — MVP, Manifest-Sync/Cache, Drift-Persistenz, Tipp-/Sprech-Quiz,
 > TTS/STT, Aussprache-Score (Levenshtein, Iter 56), SM-2 (Iter 55/59), Dark Mode
 > (Iter 57), Stats/Streak/Reminder. Darüber hinaus geliefert: Cloud-Login &
@@ -757,8 +757,8 @@ flutter build apk --release
 > Ab **Iteration 61** wird ein ganzheitliches Code-Audit (Performance/Cleanup/
 > Security) umgesetzt — geplante Tranchen: (1) Quick-Wins/Client-Korrektheit,
 > (2) Cleanups + Performance, (3) Firestore-Rules härten, (4) Backend (Cloud
-> Functions für server-autoritatives Scoring + App Check). Iter 61 lieferte
-> Tranche 1 (siehe CHANGELOG).
+> Functions für server-autoritatives Scoring + App Check). Iter 61/62 lieferten
+> Tranche 1+2 (siehe CHANGELOG).
 
 ### Phase 1 — MVP (≈ 4 Wochen)
 

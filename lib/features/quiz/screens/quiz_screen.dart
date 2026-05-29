@@ -134,6 +134,11 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
     final minutes = (state.elapsedSeconds ~/ 60).toString().padLeft(2, '0');
     final seconds = (state.elapsedSeconds % 60).toString().padLeft(2, '0');
 
+    // Einmalige Initialisierung der Ergebnis-Maske. totalQuestions ist pro
+    // Session invariant (questions ist final), daher ist diese Mutation im
+    // build-Pfad idempotent (nach dem ersten Build ein No-op) ohne
+    // Rebuild-Schleife. Nicht ersatzlos entfernen — sonst bleibt _correctMask
+    // leer und der Fortschrittsbalken füllt sich nie (Guard in _handleAnswer).
     while (_correctMask.length < state.totalQuestions) {
       _correctMask.add(null);
     }

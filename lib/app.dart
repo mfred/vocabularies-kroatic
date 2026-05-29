@@ -5,6 +5,7 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/database/database.dart' hide StreakReward;
+import 'core/network/manifest_sync_service.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/profile_screen.dart';
 import 'features/auth/screens/verify_email_screen.dart';
@@ -266,15 +267,14 @@ class _ErrorView extends StatelessWidget {
 class _LessonOverview extends ConsumerWidget {
   const _LessonOverview({required this.lessons, this.syncResult});
 
-  final List<dynamic> lessons;
-  final dynamic syncResult;
+  final List<LessonsCacheData> lessons;
+  final SyncResult? syncResult;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final totalItems = lessons.fold<int>(
       0,
-      (sum, l) =>
-          sum + ((l.wordCount + l.phraseCount + l.sentenceCount) as int),
+      (sum, l) => sum + l.wordCount + l.phraseCount + l.sentenceCount,
     );
     return RefreshIndicator(
       onRefresh: () async {
@@ -321,12 +321,12 @@ class _LessonOverview extends ConsumerWidget {
 class _EmptyState extends StatelessWidget {
   const _EmptyState({required this.syncResult});
 
-  final dynamic syncResult;
+  final SyncResult? syncResult;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final error = syncResult?.error as String?;
+    final error = syncResult?.error;
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -369,7 +369,7 @@ class _EmptyState extends StatelessWidget {
 class _SyncBanner extends StatefulWidget {
   const _SyncBanner({required this.syncResult, required this.totalItems});
 
-  final dynamic syncResult;
+  final SyncResult? syncResult;
   final int totalItems;
 
   @override
@@ -668,15 +668,26 @@ class _TopicCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final icon = _iconFor(lesson.lessonId);
-    final incomingCount = ref.watch(incomingPendingDuelsProvider).maybeWhen(
-          data: (duels) =>
-              duels.where((d) => d.lessonId == lesson.lessonId).length,
+    // .select: die Karte rebuildet nur, wenn IHR Zähler/Fortschritt sich ändert
+    // (Skalar-Vergleich), statt bei jeder Änderung der gesamten Duell-/Progress-
+    // Map (vorher rebuildeten alle Karten nach jeder beantworteten Frage).
+    final id = lesson.lessonId;
+    final incomingCount = ref.watch(
+      incomingPendingDuelsProvider.select(
+        (async) => async.maybeWhen(
+          data: (duels) => duels.where((d) => d.lessonId == id).length,
           orElse: () => 0,
-        );
-    final progress = ref.watch(lessonProgressProvider).maybeWhen(
-          data: (m) => m[lesson.lessonId] ?? 0.0,
+        ),
+      ),
+    );
+    final progress = ref.watch(
+      lessonProgressProvider.select(
+        (async) => async.maybeWhen(
+          data: (m) => m[id] ?? 0.0,
           orElse: () => 0.0,
-        );
+        ),
+      ),
+    );
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 12),

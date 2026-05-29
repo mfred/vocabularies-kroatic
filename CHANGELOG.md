@@ -7,6 +7,41 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Changed — Iteration 62 (Code-Audit Tranche 2: Cleanups + Performance)
+Zweite Audit-Tranche — Wartbarkeit, Aufräumen, kleinere Performance:
+- **Toter Code entfernt**: DB-Methoden `countItemsByLesson`, `topSessions`,
+  `topSessionsDetailed` samt `DetailedSessionRow` (alle ohne Aufrufer — die
+  Bestenliste läuft über Firestore), sowie `SystemIntents.openPackageLaunch`.
+- **Performance-Indizes**: Sekundär-Indizes auf den heißen Join-/Filter-Spalten
+  (`quiz_attempts(session_id)`, `quiz_sessions(player_id, direction)`,
+  `items(lesson_id)`) — Schema **v10**, idempotent via `CREATE INDEX IF NOT
+  EXISTS` in onCreate + onUpgrade. Beschleunigt `watchLessonProgress`, die
+  SM-2-Faltung und die Fehler-/Seen-Queries (vorher Full-Table-Scans).
+- **Rebuild-Hygiene**: `_TopicCard` liest Fortschritt und eingehende Duelle jetzt
+  via `.select` — eine Karte rebuildet nur noch bei Änderung IHRES Werts statt
+  alle Karten nach jeder beantworteten Frage.
+- **Avatar-Cache**: `flutter_svg`-LRU-Cap auf 256 angehoben, damit große
+  Bestenlisten/Suchen (>100 distinkte DiceBear-Avatare über alle Range-Tabs)
+  nicht innerhalb der Session verdrängt und neu geladen werden.
+- **Typsicherheit**: `_LessonOverview`/`_EmptyState`/`_SyncBanner` nutzen
+  `List<LessonsCacheData>`/`SyncResult?` statt `dynamic` — Feldzugriffe sind
+  wieder compile-geprüft, redundante Casts entfernt.
+- **Entdoppelung**: gemeinsamer `dayKey()` (`core/utils/date_key.dart`) statt 3×
+  dupliziertem Tagesschlüssel; gemeinsamer `formatDuelTime()`
+  (`features/duel/duel_time_format.dart`) statt 2× byte-identischem `_formatMs`.
+  Der Daily-Quiz-Seed `dailyDateKey` bleibt bewusst separat (stabiler Seed-Vertrag).
+- **Android**: ungenutzte `SCHEDULE_EXACT_ALARM`/`USE_EXACT_ALARM`-Permissions
+  entfernt (Scheduler nutzt nur inexakte Alarme; vermeidet Play-Policy-Risiko).
+- **Logging**: Firebase-Init-Fehler wird nicht mehr per `print()` samt Stacktrace
+  im Release geloggt, sondern nur noch im Debug-Build.
+- **Doku**: geparste-aber-(noch)-ungenutzte Felder (`stages`, `audioHint`,
+  `wordRefs`, `globalLicenses`) als reserviert kommentiert statt entfernt; die
+  Duell-Strafzeit-Kommentare verweisen jetzt auf `kDuelPenaltyMs` (statt „200 ms",
+  Konstante ist 500 ms).
+- **Bewusst verschoben**: Distraktor-Auswahl-Dedup (Seed-Determinismus-Risiko bei
+  geringem Nutzen) und persistenter Avatar-Disk-Cache (neue Dependency nötig; der
+  LRU-Cap deckt den Hauptfall bereits ab). Alle 84 Tests grün.
+
 ### Fixed — Iteration 61 (Code-Audit Tranche 1: Quick-Wins, Korrektheit & Robustheit)
 Erste Tranche aus dem ganzheitlichen Code-Audit (Performance/Cleanup/Security) —
 risikoarme, rein clientseitige Korrekturen:

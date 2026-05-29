@@ -9,6 +9,7 @@ import '../core/network/dio_client.dart';
 import '../core/network/manifest_sync_service.dart';
 import '../core/services/stt_service.dart';
 import '../core/services/tts_service.dart';
+import '../core/utils/date_key.dart';
 import '../features/highscore/models/leaderboard_entry.dart';
 import '../features/highscore/models/leaderboard_filter.dart';
 import '../features/highscore/models/session_detail.dart';
@@ -230,7 +231,7 @@ final streakDiagnosticsProvider =
   final daySet = <DateTime>{};
   for (final ms in finished) {
     final d = DateTime.fromMillisecondsSinceEpoch(ms);
-    final key = d.year * 10000 + d.month * 100 + d.day;
+    final key = dayKey(d);
     if (dayKeys.add(key)) daySet.add(DateTime(d.year, d.month, d.day));
   }
   final days = daySet.toList()..sort((a, b) => b.compareTo(a));

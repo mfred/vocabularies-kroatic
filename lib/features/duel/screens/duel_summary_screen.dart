@@ -10,6 +10,7 @@ import '../../../shared/firebase_status.dart';
 import '../../../shared/providers.dart';
 import '../../../shared/widgets/tablet_constrained.dart';
 import '../duel_providers.dart';
+import '../duel_time_format.dart';
 import '../models/duel_pair.dart';
 import '../models/duel_run_result.dart';
 import '../widgets/duel_friend_picker_dialog.dart';
@@ -39,18 +40,6 @@ class DuelSummaryScreen extends ConsumerStatefulWidget {
 
 class _DuelSummaryScreenState extends ConsumerState<DuelSummaryScreen> {
   bool _sending = false;
-
-  String _formatMs(int ms) {
-    final totalSeconds = ms ~/ 1000;
-    final minutes = totalSeconds ~/ 60;
-    final seconds = totalSeconds % 60;
-    final centi = (ms % 1000) ~/ 10;
-    if (minutes > 0) {
-      return '$minutes:${seconds.toString().padLeft(2, '0')}.'
-          '${centi.toString().padLeft(2, '0')}';
-    }
-    return '${(ms / 1000).toStringAsFixed(2)} s';
-  }
 
   Future<void> _challengeFriend() async {
     // Sofort visuelles Feedback — sonst wirkt der Tap wie "nichts passiert",
@@ -247,7 +236,7 @@ class _DuelSummaryScreenState extends ConsumerState<DuelSummaryScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                _formatMs(widget.result.totalMs),
+                formatDuelTime(widget.result.totalMs),
                 textAlign: TextAlign.center,
                 style: theme.textTheme.displayMedium?.copyWith(
                   color: scheme.primary,
@@ -258,7 +247,7 @@ class _DuelSummaryScreenState extends ConsumerState<DuelSummaryScreen> {
               if (widget.result.totalPenaltyMs > 0) ...[
                 const SizedBox(height: 4),
                 Text(
-                  'inkl. ${_formatMs(widget.result.totalPenaltyMs)} Strafzeit',
+                  'inkl. ${formatDuelTime(widget.result.totalPenaltyMs)} Strafzeit',
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: scheme.error,
@@ -285,7 +274,7 @@ class _DuelSummaryScreenState extends ConsumerState<DuelSummaryScreen> {
                         index: i + 1,
                         ms: widget.result.roundsMs[i],
                         penaltyMs: widget.result.penaltiesMs[i],
-                        format: _formatMs,
+                        format: formatDuelTime,
                       ),
                     ],
                   ],

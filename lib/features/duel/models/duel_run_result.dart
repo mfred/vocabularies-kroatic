@@ -1,5 +1,5 @@
 /// Ergebnis eines kompletten 3-Runden-Duell-Laufs. Zeiten in Millisekunden,
-/// inklusive 200 ms Strafen pro falscher Zuordnung.
+/// inklusive Strafzeit pro falscher Zuordnung (siehe `kDuelPenaltyMs`).
 class DuelRunResult {
   const DuelRunResult({
     required this.roundsMs,
@@ -9,7 +9,7 @@ class DuelRunResult {
   /// Pro-Runden-Zeit (Stopwatch + Penalties). Genau drei Einträge.
   final List<int> roundsMs;
 
-  /// Aufsummierte Strafe je Runde (jeweils ein Vielfaches von 200).
+  /// Aufsummierte Strafe je Runde (jeweils ein Vielfaches von `kDuelPenaltyMs`).
   final List<int> penaltiesMs;
 
   int get totalMs => roundsMs.fold(0, (a, b) => a + b);

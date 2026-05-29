@@ -11,6 +11,8 @@ abstract class LessonData with _$LessonData {
     required String version,
     required LessonTitle title,
     LessonDescription? description,
+    // Aktuell ungenutzt — reserviert fürs geplante Lektions-Struktur-UI. Wird
+    // aus dem Daten-Repo geparst, aber noch nicht persistiert/angezeigt.
     required List<LessonStage> stages,
     required List<LessonItem> items,
   }) = _LessonData;
@@ -78,6 +80,7 @@ abstract class LessonItem with _$LessonItem {
     ItemNotes? notes,
     @JsonKey(name: 'requires')
     @Default(<String>[]) List<String> requiresIds,
+    // Aktuell ungenutzt — reserviert für künftige Wort-Querverweise.
     @Default(<String>[]) List<String> wordRefs,
     Map<String, dynamic>? license,
   }) = _LessonItem;
@@ -92,6 +95,7 @@ abstract class ItemLanguage with _$ItemLanguage {
     required String text,
     String? ipa,
     String? pos,
+    // Aktuell ungenutzt — reserviert für künftige Audio-Aussprache-Hinweise.
     String? audioHint,
   }) = _ItemLanguage;
 

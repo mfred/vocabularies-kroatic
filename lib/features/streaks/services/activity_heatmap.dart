@@ -6,6 +6,8 @@
 /// reine Faltung ist hier ausgelagert, damit sie ohne DB/Flutter testbar ist.
 library;
 
+import '../../../core/utils/date_key.dart';
+
 /// Ergebnis der Heatmap-Faltung. Spalten = Wochen (älteste links, „heute" in
 /// der letzten Spalte), Zeilen = Wochentage (Mo = 0 … So = 6).
 class ActivityHeatmap {
@@ -36,8 +38,6 @@ class ActivityHeatmap {
   bool get isEmpty => totalSessions == 0;
 }
 
-int _dayKey(DateTime d) => d.year * 10000 + d.month * 100 + d.day;
-
 /// Addiert [days] Tage über den Konstruktor (DST-sicher, anders als
 /// `Duration(days:)`, das über Sommerzeit-Grenzen verrutschen kann).
 DateTime _addDays(DateTime base, int days) =>
@@ -56,12 +56,12 @@ ActivityHeatmap buildActivityHeatmap(
   final counts = <int, int>{};
   for (final ms in finishedAtsMs) {
     final d = DateTime.fromMillisecondsSinceEpoch(ms);
-    final key = _dayKey(DateTime(d.year, d.month, d.day));
+    final key = dayKey(DateTime(d.year, d.month, d.day));
     counts[key] = (counts[key] ?? 0) + 1;
   }
 
   final today = DateTime(now.year, now.month, now.day);
-  final todayKey = _dayKey(today);
+  final todayKey = dayKey(today);
   // weekday: Mo = 1 … So = 7 → Spalten-Index Mo = 0.
   final todayCol = today.weekday - 1;
   // Montag der ersten sichtbaren Woche.
@@ -75,11 +75,11 @@ ActivityHeatmap buildActivityHeatmap(
     final col = <int?>[];
     for (var d = 0; d < 7; d++) {
       final date = _addDays(start, w * 7 + d);
-      if (_dayKey(date) > todayKey) {
+      if (dayKey(date) > todayKey) {
         col.add(null);
         continue;
       }
-      final c = counts[_dayKey(date)] ?? 0;
+      final c = counts[dayKey(date)] ?? 0;
       col.add(c);
       if (c > 0) {
         activeDays++;

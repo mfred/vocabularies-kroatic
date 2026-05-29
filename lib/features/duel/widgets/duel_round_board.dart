@@ -14,7 +14,7 @@ import '../models/duel_pair.dart';
 ///
 /// Korrekter Drop = grüner Fade auf beiden Karten (siehe `_FadingMatchedCard`).
 /// Falscher Drop = das fälschlich getroffene Target blinkt rot, wackelt kurz
-/// horizontal und löst eine kurze Geräte-Vibration aus; Strafzeit +200 ms
+/// horizontal und löst eine kurze Geräte-Vibration aus; Strafzeit (kDuelPenaltyMs)
 /// wird via `registerIncorrectAttempt` registriert.
 class DuelRoundBoard extends StatelessWidget {
   const DuelRoundBoard({super.key, required this.controller});

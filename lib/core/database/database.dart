@@ -143,11 +143,14 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (m) => m.createAll(),
+        onCreate: (m) async {
+          await m.createAll();
+          await _createPerformanceIndexes();
+        },
         onUpgrade: (m, from, to) async {
           if (from < 2) {
             await m.createTable(players);
@@ -192,8 +195,24 @@ class AppDatabase extends _$AppDatabase {
           if (from < 9) {
             await m.addColumn(players, players.lastSaverConsumedDayKey);
           }
+          if (from < 10) {
+            await _createPerformanceIndexes();
+          }
         },
       );
+
+  /// Sekundär-Indizes auf den heißen Join-/Filter-Spalten der Quiz-Queries
+  /// (watchLessonProgress, wrongItemsForLesson, seenItemIdsForPlayer,
+  /// sm2StatesByItem). `IF NOT EXISTS` macht den Aufruf idempotent, sodass
+  /// onCreate (Fresh-Install) und onUpgrade dieselbe Methode nutzen können.
+  Future<void> _createPerformanceIndexes() async {
+    await customStatement('CREATE INDEX IF NOT EXISTS idx_attempts_session '
+        'ON quiz_attempts (session_id)');
+    await customStatement('CREATE INDEX IF NOT EXISTS idx_sessions_player_dir '
+        'ON quiz_sessions (player_id, direction)');
+    await customStatement('CREATE INDEX IF NOT EXISTS idx_items_lesson '
+        'ON items (lesson_id)');
+  }
 
   Future<List<LessonsCacheData>> allLessonsByOrder() {
     return (select(lessonsCache)
@@ -203,14 +222,6 @@ class AppDatabase extends _$AppDatabase {
 
   Future<int> countItems() async {
     final row = await (selectOnly(items)..addColumns([items.id.count()]))
-        .getSingle();
-    return row.read(items.id.count()) ?? 0;
-  }
-
-  Future<int> countItemsByLesson(String lessonId) async {
-    final row = await (selectOnly(items)
-          ..addColumns([items.id.count()])
-          ..where(items.lessonId.equals(lessonId)))
         .getSingle();
     return row.read(items.id.count()) ?? 0;
   }
@@ -453,28 +464,6 @@ GROUP BY items.lesson_id
         .toList();
   }
 
-  Future<List<QuizSession>> topSessions({
-    required int sinceMs,
-    required int untilMs,
-    String? lessonId,
-    int limit = 50,
-  }) {
-    final q = select(quizSessions)
-      ..where((t) =>
-          t.finishedAt.isNotNull() &
-          t.finishedAt.isBetweenValues(sinceMs, untilMs))
-      ..orderBy([
-        (t) => OrderingTerm(
-            expression: t.scorePoints, mode: OrderingMode.desc),
-        (t) => OrderingTerm(expression: t.durationMs),
-      ])
-      ..limit(limit);
-    if (lessonId != null) {
-      q.where((t) => t.lessonId.equals(lessonId));
-    }
-    return q.get();
-  }
-
   /// Anzahl der Sessions des Spielers, die *gestartet* aber nie
   /// finalisiert wurden (App-Crash, Quiz abgebrochen, …). Reine
   /// Diagnose-Info — hilft beim Debugging, wenn der Streak nicht
@@ -599,52 +588,6 @@ GROUP BY items.lesson_id
     return true;
   }
 
-  Future<List<DetailedSessionRow>> topSessionsDetailed({
-    required int sinceMs,
-    required int untilMs,
-    String? lessonId,
-    int limit = 50,
-  }) async {
-    final q = select(quizSessions).join([
-      leftOuterJoin(players, players.id.equalsExp(quizSessions.playerId)),
-      leftOuterJoin(
-        lessonsCache,
-        lessonsCache.lessonId.equalsExp(quizSessions.lessonId),
-      ),
-    ])
-      ..where(quizSessions.finishedAt.isNotNull() &
-          quizSessions.finishedAt.isBetweenValues(sinceMs, untilMs))
-      ..orderBy([
-        OrderingTerm(
-            expression: quizSessions.scorePoints,
-            mode: OrderingMode.desc),
-        OrderingTerm(expression: quizSessions.durationMs),
-      ])
-      ..limit(limit);
-    if (lessonId != null) {
-      q.where(quizSessions.lessonId.equals(lessonId));
-    }
-    final rows = await q.get();
-    return rows
-        .map((r) => DetailedSessionRow(
-              session: r.readTable(quizSessions),
-              player: r.readTableOrNull(players),
-              lesson: r.readTableOrNull(lessonsCache),
-            ))
-        .toList();
-  }
-}
-
-class DetailedSessionRow {
-  const DetailedSessionRow({
-    required this.session,
-    required this.player,
-    required this.lesson,
-  });
-
-  final QuizSession session;
-  final Player? player;
-  final LessonsCacheData? lesson;
 }
 
 class DetailedAttemptRow {

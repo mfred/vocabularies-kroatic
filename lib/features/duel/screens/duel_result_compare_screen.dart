@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/providers.dart';
 import '../../../shared/widgets/tablet_constrained.dart';
 import '../duel_providers.dart';
+import '../duel_time_format.dart';
 import '../models/duel.dart';
 
 /// Endbild nach Abschluss eines Online-Duells. Live aus Firestore, damit
@@ -69,18 +70,6 @@ class _CompletedView extends StatelessWidget {
   final Duel duel;
   final String? myUid;
 
-  String _formatMs(int ms) {
-    final totalSeconds = ms ~/ 1000;
-    final minutes = totalSeconds ~/ 60;
-    final seconds = totalSeconds % 60;
-    final centi = (ms % 1000) ~/ 10;
-    if (minutes > 0) {
-      return '$minutes:${seconds.toString().padLeft(2, '0')}.'
-          '${centi.toString().padLeft(2, '0')}';
-    }
-    return '${(ms / 1000).toStringAsFixed(2)} s';
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -128,8 +117,8 @@ class _CompletedView extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             iWon
-                ? '${_formatMs(diffMs)} schneller als ${iAmChallenger ? duel.opponentDisplayName : duel.challengerDisplayName}'
-                : '${_formatMs(diffMs)} langsamer als ${iAmChallenger ? duel.opponentDisplayName : duel.challengerDisplayName}',
+                ? '${formatDuelTime(diffMs)} schneller als ${iAmChallenger ? duel.opponentDisplayName : duel.challengerDisplayName}'
+                : '${formatDuelTime(diffMs)} langsamer als ${iAmChallenger ? duel.opponentDisplayName : duel.challengerDisplayName}',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: scheme.onSurfaceVariant,
@@ -141,7 +130,7 @@ class _CompletedView extends StatelessWidget {
             isMe: iAmChallenger,
             isWinner: duel.winnerUid == duel.challengerUid,
             result: challenger,
-            format: _formatMs,
+            format: formatDuelTime,
           ),
           const SizedBox(height: 10),
           _PlayerCard(
@@ -149,7 +138,7 @@ class _CompletedView extends StatelessWidget {
             isMe: iAmOpponent,
             isWinner: duel.winnerUid == duel.opponentUid,
             result: opponent,
-            format: _formatMs,
+            format: formatDuelTime,
           ),
           const SizedBox(height: 24),
           FilledButton.icon(

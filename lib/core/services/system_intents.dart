@@ -15,19 +15,6 @@ class SystemIntents {
     await intent.launch();
   }
 
-  static Future<void> openPackageLaunch(String packageId) async {
-    if (!Platform.isAndroid) return;
-    try {
-      final intent = AndroidIntent(
-        action: 'android.intent.action.MAIN',
-        package: packageId,
-      );
-      await intent.launch();
-    } catch (_) {
-      await openPlayStorePackage(packageId);
-    }
-  }
-
   static Future<void> openAppInfo(String packageId) async {
     if (!Platform.isAndroid) return;
     final intent = AndroidIntent(

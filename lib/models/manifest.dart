@@ -12,6 +12,8 @@ abstract class Manifest with _$Manifest {
     required String baseUrl,
     required ManifestLanguages languages,
     required List<ManifestLesson> lessons,
+    // Aktuell ungenutzt — reserviert für einen künftigen Attributions-/Lizenz-
+    // Screen (wird geparst, aber noch nirgends angezeigt).
     @JsonKey(name: 'globalLicenses') List<GlobalLicense>? globalLicenses,
   }) = _Manifest;
 

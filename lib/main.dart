@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import 'app.dart';
 import 'core/database/database.dart' hide StreakReward;
@@ -22,6 +23,10 @@ Future<void> main() async {
   // das native Splash-Icon rendert auf manchen Emulatoren (MEMU) nicht
   // zuverlässig, v.a. im Querformat.
   FlutterNativeSplash.preserve(widgetsBinding: binding);
+  // Avatar-SVGs (DiceBear) liegen in flutter_svgs prozessweitem LRU-Cache. Cap
+  // anheben, damit große Bestenlisten/Suchen (>100 distinkte Avatare über alle
+  // Range-Tabs) nicht innerhalb der Session verdrängt und neu geladen werden.
+  svg.cache.maximumSize = 256;
   await _tryInitFirebase();
   // Eine einzige DB-Instanz für die gesamte App. Frueher öffnete der
   // Reminder-Init eine zweite Connection auf dieselbe Datei — beim Kaltstart
@@ -56,10 +61,8 @@ Future<void> _tryInitFirebase() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     FirebaseStatus.instance.markReady();
-  } catch (e, st) {
+  } catch (e) {
     FirebaseStatus.instance.markUnavailable(e.toString());
-    // ignore: avoid_print
-    print('[Firebase init failed] $e\n$st');
     if (kDebugMode) {
       debugPrint(
         'Firebase nicht initialisiert ($e). '
