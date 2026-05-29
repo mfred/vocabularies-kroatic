@@ -20,6 +20,7 @@ import '../features/quiz/services/daily_assignment.dart';
 import '../features/quiz/services/daily_quiz_builder.dart';
 import '../features/quiz/services/due_review_builder.dart';
 import '../features/streaks/models/streak_reward.dart';
+import '../features/streaks/services/activity_heatmap.dart';
 import '../features/streaks/services/reminder_service.dart';
 import '../features/streaks/services/streak_service.dart';
 
@@ -165,6 +166,16 @@ final longestStreakProvider = FutureProvider.autoDispose<int>((ref) async {
 final currentStreakProvider = FutureProvider.autoDispose<int>((ref) async {
   final player = await ref.watch(currentPlayerProvider.future);
   return ref.watch(streakServiceProvider).currentStreak(player.id);
+});
+
+/// Aktivitäts-Heatmap der letzten 13 Wochen, gefaltet aus derselben
+/// Session-Historie wie der Streak.
+final activityHeatmapProvider =
+    FutureProvider.autoDispose<ActivityHeatmap>((ref) async {
+  final player = await ref.watch(currentPlayerProvider.future);
+  final finished =
+      await ref.watch(databaseProvider).finishedAtsForPlayer(player.id);
+  return buildActivityHeatmap(finished, DateTime.now());
 });
 
 /// True, wenn der nächste Quiz-Score durch das 7-Tage-Geschenk verdoppelt

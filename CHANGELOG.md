@@ -7,6 +7,127 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Added — Iteration 60 (Aktivitäts-Heatmap im Profil)
+- Neue Karte „Aktivität" im Profil: eine GitHub-artige Heatmap der letzten 13
+  Wochen, gefaltet aus derselben Session-Historie wie der Streak
+  (`finishedAtsForPlayer` → `buildActivityHeatmap`) — keine neue Tabelle, keine
+  zweite Quelle der Wahrheit. Spalten = Wochen (heute rechts), Zeilen =
+  Wochentage (Mo oben); Tageszähler in vier Intensitätsstufen der Primärfarbe
+  relativ zum Maximum im Fenster, plus Legende „weniger → mehr" und eine Zeile
+  „An N Tagen gespielt — M Quizze in 13 Wochen".
+- Die Faltung (`features/streaks/services/activity_heatmap.dart`) ist als reine,
+  DST-sichere Funktion ausgelagert und unit-getestet (`activity_heatmap_test`);
+  künftige Tage der laufenden Woche bleiben leer, ältere Sessions fallen aus dem
+  Fenster. `activityHeatmapProvider` liefert sie an die UI.
+
+### Changed — Iteration 59 (SM-2 treibt auch das Lektions-Quiz)
+- Der Pro-Lektion-`QuizBuilder` wählt die Fragen jetzt über den aus der
+  Attempt-Historie gefalteten SM-2-Zustand (`sm2StatesByItem`) statt der
+  `new/stumbled/mastered`-Heuristik: `QuizSelector` priorisiert fällige Items
+  (am überfälligsten zuerst), mischt einige neue dazu und füllt mit den als
+  Nächstes fälligen auf. Spaced Repetition wirkt damit auch beim freien Üben.
+- Ungenutzte `attemptStatsByItem` (DB) samt `ItemAttemptStats`-Modell entfernt;
+  `quiz_selector_test` auf das SM-2-Verhalten umgeschrieben.
+
+### Fixed — Iteration 58 (Querformat-Feinschliff: Summary screenfit + Diakritika-Toleranz)
+- **Zusammenfassung im Querformat**: die starre `Column`+`Spacer` schnitt
+  „Punkte" und die Buttons ab. `QuizSummaryScreen` nutzt jetzt
+  `LayoutBuilder`/`isWide` — im Querformat die vier Basis-Kennzahlen als
+  2×2-Grid + „Punkte" voll-breit, Mittelteil in
+  `Expanded(SingleChildScrollView)`, Buttons unten gepinnt; `_BigStat`-Label
+  `Expanded` gegen horizontalen Overflow in der halben Grid-Breite.
+- **Diakritika-Toleranz**: „cao" für „čao" galt als falsch. `AnswerEvaluator`
+  faltet jetzt č/ć→c, š→s, ž→z, đ→d in der toleranten Stufe → Verdict
+  `tolerant` (richtig + „Achte auf die Schreibweise"-Hinweis). `evaluate()`
+  bekommt ein `tolerant`-Flag; für Multiple Choice abgeschaltet, damit keine
+  nur-diakritisch abweichende Falschoption als richtig zählt.
+
+### Added — Iteration 57 (Dark Mode)
+- Dunkles `ColorScheme` (`ColorScheme.fromSeed`, `Brightness.dark`, gleicher
+  Marken-Seed) + `themeMode: ThemeMode.system` — folgt der OS-Einstellung, kein
+  In-App-Schalter. Die UI nutzt durchgehend `colorScheme`-Rollen, daher
+  adaptiert sie automatisch; native Splash-Night-Varianten existierten bereits.
+
+### Added — Iteration 56 (Aussprache-Scoring fürs Sprech-Quiz)
+- Sprech-Antworten (`speak`/`listenSpeak`) werden per Levenshtein-Ähnlichkeit
+  bewertet (`core/utils/levenshtein.dart`, PROJECT.md §8.3). Ab 0.6 zählt die
+  Antwort als richtig (Verdict `close`); der Prozentwert erscheint im Reveal als
+  „Aussprache: NN %" — auch bei knapp verfehlten Antworten als Feedback.
+- Nur Sprech-Formate werten fuzzy (`QuizFormat.isSpeech`); Multiple Choice und
+  Schreiben bleiben strikt/tolerant.
+
+### Added — Iteration 55 (SM-2 Spaced Repetition + „Fällige Wiederholung")
+- Echtes Spaced Repetition: der SM-2-Zustand (Ease/Intervall/Fälligkeit) wird
+  deterministisch aus der `quiz_attempts`-Historie gefaltet (`Sm2Scheduler` +
+  `sm2StatesByItem`) — keine neue Tabelle, keine Migration.
+- Neuer Home-Eintrag „Fällige Wiederholung (N)" unter dem Quiz des Tages (nur
+  sichtbar, wenn etwas fällig ist) startet ein lektionsübergreifendes Quiz aus
+  den überfälligsten Items über den bestehenden `QuizScreen`.
+- Distraktor-Bau als top-level `buildPoolQuestions` extrahiert/geteilt. Tests:
+  SM-2-Rekurrenz, Quality-Mapping, Due-Selektion.
+
+### Changed — Iteration 54 (Nativen Android-12-Splash-Icon entfernt)
+- `windowSplashScreenAnimatedIcon` in den v31-Styles auf
+  `@android:color/transparent` gesetzt — der native Android-12-Splash zeigt nur
+  noch die grüne Fläche, das Logo kommt allein aus dem Flutter-`SplashGate`.
+  Ungenutzte `android12splash.png` in allen Dichten gelöscht. Pre-Android-12-Pfad
+  (`launch_background.xml`/`splash.png`) unverändert.
+
+### Changed — Iteration 53 (Logo-Splash in Flutter statt nativ)
+- Das native Android-12-Splash-Icon rendert auf MEMU-Emulatoren unzuverlässig
+  (im Querformat blieb nur Grün). Ein Flutter-`SplashGate` zeigt das Logo jetzt
+  deterministisch in jeder Orientierung und auf jeder Android-Version; der native
+  Splash hält nur noch den grünen Hintergrund bis zum ersten Frame.
+
+### Fixed — Iteration 52 (Android-12-Splash-Logo gepolstert)
+- Das randlose 512px-Splash-Icon wurde vom Android-12-System-Iconrahmen
+  weggeschnitten (nur grüner Hintergrund im Hochformat-Emulator). Neues
+  1152×1152-Icon mit zentriertem Logo im Schutzkreis; Legacy-Splash (Android 9)
+  unverändert.
+
+### Fixed — Iteration 51 (leeres Setup-Grid im Querformat, Regression aus Iter 47)
+- Die 2×2-Format-Kacheln nutzten `Row(stretch)` in einer vertikal
+  unbeschränkten `SingleChildScrollView` → Layout schlug fehl, Grid und
+  Start-Button blieben leer. Row jetzt in `IntrinsicHeight` gewickelt; plus
+  Regressions-Test.
+
+### Fixed — Iteration 50 (deaktivierten Joker dimmen)
+- Ein nicht verfügbarer Joker wirkte durch das farbige Emoji (Farb-Glyphe
+  ignoriert `TextStyle.color`) fälschlich aktiv. Button-Inhalt im
+  disabled-Zustand jetzt per `Opacity` gedimmt.
+
+### Fixed — Iteration 49 (Lektions-Cache per Inhalts-Hash invalidieren)
+- Der Sync überschrieb gecachte Lektionen bisher nur bei geänderter Version;
+  Inhaltsänderungen ohne Versionsbump (z.B. nachgepflegte `hr.ipa`) blieben
+  stale → IPA-Joker tot. Jetzt wird zusätzlich der `sha256` verglichen, sodass
+  jede inhaltliche Änderung ein Neu-Laden auslöst.
+
+### Fixed — Iteration 48 (Lautschrift-Joker nutzt immer kroatische IPA)
+- Der Datensatz pflegt nur `hr.ipa` (`de.ipa` leer); richtungsabhängig zog der
+  Joker in HR→DE die leere `de.ipa` und war tot/ausgegraut. `_ipaFor` gibt jetzt
+  immer `hrIpa` zurück → der Joker funktioniert in beiden Richtungen. Plus
+  Widget-Test.
+
+### Changed — Iteration 47 (Weiter-Button vollbreit, Setup-Grid 2×2, IPA-Joker getrimmt)
+- Querformat-Quiz: Weiter-Button spannt vollbreit (`stretch` auf beiden
+  Spalten); `QuizSetupScreen` zeigt die Format-Kacheln im Querformat als
+  2×2-Grid. IPA wird an der Quelle getrimmt, damit Whitespace-only-Werte den
+  Joker korrekt ausgrauen statt einen leeren Reveal zu zeigen.
+
+### Fixed — Iteration 46 (Jokerleiste-Layout + DB-Lock beim Kaltstart)
+- Querformat: Jokerleiste in die linke Spalte unter den Prompt, Weiter-Button
+  rechts unter die Antworten → die Antwortliste bekommt volle Höhe und wird
+  nicht mehr abgeschnitten.
+- **DB-Lock-Crash behoben**: nur noch eine geteilte `AppDatabase`-Instanz (per
+  `ProviderScope`-Override). Der Reminder-Init öffnete zuvor eine zweite
+  Connection auf dieselbe Datei → „database is locked (code 5)" beim Kaltstart.
+
+### Changed — Iteration 45 (Quiz responsiv, kein Scrollen auf Tablet)
+- Quiz/Quiz des Tages: Querformat zweispaltig (Prompt links, Antworten rechts),
+  Hochformat einspaltig vertikal zentriert; scrollt nur noch bei echter
+  Überlänge. Duell-Ergebnisscreen scrollbar + zentriert, damit nichts
+  abgeschnitten wird.
+
 ### Changed — Iteration 44 (TabletConstrained auf alle Screens ausgeweitet)
 - Nach dem Live-Test von Iter 43 zeigte sich, dass nur die Quiz-Screens
   zentriert waren — viele weitere Top-Level-Screens streckten ihre

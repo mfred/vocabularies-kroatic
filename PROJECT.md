@@ -4,7 +4,9 @@
 > und Aussprachebewertung. Fokus auf praxistauglichem Reise-Wortschatz.
 > Endprodukt: native Android-App (APK) auf Basis von Flutter.
 
-**Status:** Greenfield, Planungs- und Konzeptphase (Stand 2026-05-16).
+**Status:** Produktiv — App **v1.0.60**, lauffähige Release-APK, 12 Lektionen mit
+~1.622 Items. Roadmap-Phasen 1–3 weitgehend umgesetzt, zahlreiche Features darüber
+hinaus geliefert (siehe §12). Stand 2026-05-29.
 
 ---
 
@@ -472,6 +474,14 @@ getrennt**. Wenn ein Lektions-Update Items neu lädt, wird `progress` nie
 
 ## 7. Spaced-Repetition-Algorithmus (SM-2)
 
+> **Umsetzungsstand:** Seit Iteration 55 produktiv. Der SM-2-Zustand
+> (Ease-Faktor, Intervall, Fälligkeit) wird **nicht persistiert**, sondern bei
+> Bedarf deterministisch aus der `quiz_attempts`-Historie gefaltet
+> (`Sm2Scheduler` + `AppDatabase.sm2StatesByItem`) — mathematisch äquivalent zu
+> einer Progress-Tabelle, aber ohne zweite Quelle der Wahrheit/Migration. SM-2
+> treibt sowohl den Home-Eintrag „Fällige Wiederholung" (Iter 55) als auch die
+> Frage-Auswahl im regulären Lektions-Quiz (Iter 59).
+
 ### 7.1 Warum SM-2?
 
 Bewährt, einfach implementierbar, vergleichbare Resultate mit moderneren
@@ -578,10 +588,12 @@ String _normalize(String s) => s
     .trim();
 ```
 
-**Diakritika werden bewusst beibehalten** (č, ć, š, ž, đ) — sie sind
-phonetisch unterscheidend und müssen Teil der Bewertung sein. Optional
-kann eine phonetische Vor-Normalisierung (č→tsch, š→sch …) zugeschaltet
-werden, um STT-Inkonsistenzen auszugleichen.
+**Diakritika-Handhabung** (č, ć, š, ž, đ): Die `strict`-Stufe verlangt sie
+exakt (perfekte Antwort, kein Hinweis). Seit **Iteration 58** faltet die
+**tolerante** Stufe sie jedoch (č/ć→c, š→s, ž→z, đ→d), sodass eine nur durch
+fehlende/falsche Akzente abweichende Antwort als richtig **mit
+Schreibweise-Hinweis** zählt — Lern-Ergonomie vor orthographischer Strenge.
+Multiple Choice bleibt strikt (exakte Option-Auswahl).
 
 **Mapping der Scores → SM-2-Quality** siehe §7.3.
 
@@ -732,6 +744,16 @@ flutter build apk --release
 
 ## 12. Roadmap
 
+> **Umsetzungsstand (Iteration 60, 2026-05-29):** Phasen 1–3 sind weitgehend
+> umgesetzt — MVP, Manifest-Sync/Cache, Drift-Persistenz, Tipp-/Sprech-Quiz,
+> TTS/STT, Aussprache-Score (Levenshtein, Iter 56), SM-2 (Iter 55/59), Dark Mode
+> (Iter 57), Stats/Streak/Reminder. Darüber hinaus geliefert: Cloud-Login &
+> globale Bestenliste, Freunde, **Duell-Modus**, **Quiz des Tages** (mit
+> Modi/Boni), DiceBear-**Avatare** (siehe unten), Quiz-Joker,
+> **Aktivitäts-Heatmap** im Profil (Iter 60). Noch offen u.a.: dedizierter
+> Fehlerfokus-Modus als eigener Eintrag, weitere Stats-Visualisierungen,
+> Englisch als Quellsprache, Web-Build.
+
 ### Phase 1 — MVP (≈ 4 Wochen)
 
 **Featureumfang:**
@@ -784,7 +806,9 @@ Spieler-Profil bekommt ein Avatar-Feld. Konzept-Skizze:
   unter `users/{uid}.avatar`.
 - UI: Avatar im Profile-Screen + Drawer-Header + Bestenlisten-Zeile.
 
-Reine Roadmap-Notiz — keine Code-Änderung in dieser Phase.
+**Umgesetzt** (Iterationen 35–37): DiceBear-Avatare mit Stil-Auswahl, sichtbar in
+Profil, Drawer-Header und Bestenliste. Die ursprüngliche „spätere Release"-Notiz
+ist damit erledigt.
 
 ### Phase 5 — Backlog
 
