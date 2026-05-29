@@ -7,6 +7,35 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Added — Iteration 65 (Fehlerfokus — eigener Home-Eintrag)
+Der lange als „noch offen" gelistete **dedizierte Fehlerfokus-Modus** (PROJECT.md
+§2.4 / §9.1) ist umgesetzt — als schlanker, lektionsübergreifender Eintrag auf
+dem Home-Screen, der die bestehende Quiz-Engine wiederverwendet (kein eigener
+Modus/keine eigene Engine):
+- **Neuer Home-Eintrag „🎯 Fehlerfokus"** (`_ErrorFocusCard` in `app.dart`),
+  direkt unter „Fällige Wiederholung". Erscheint nur, wenn es überhaupt
+  schwierige Vokabeln gibt (sonst kein leerer Platzhalter), zeigt deren Anzahl
+  und startet per Tap ein 10-Fragen-MC-Quiz aus den **härtesten** Items.
+- **Ranking nach errorRate** = `errors / (errors + successes + 1)` (PROJECT.md
+  §2.4), lektionsübergreifend und **richtungs-agnostisch** über die
+  `quiz_attempts`-Historie gefaltet — gleiche Konvention wie
+  `wrongItemsForLesson`/`watchLessonProgress` (beide Richtungen zählen in
+  denselben Pool). Neue Query `AppDatabase.itemErrorStats` (reine Aggregation,
+  **kein Schema-Bump**) + `ItemErrorStat`-Datenklasse; neuer
+  `ErrorFocusBuilder` spiegelt `DueReviewBuilder` und liefert die Fragen über
+  das geteilte `buildPoolQuestions`.
+- **Session-Länge**: bewusst die App-Standardgröße von 10 Fragen (die härtesten
+  10), statt der im Konzeptpapier genannten „Top-30" — Konsistenz mit allen
+  anderen Sessions und Lern-Ergonomie. Verbrannte (gelöschte) Item-IDs werden
+  beim Pool-Aufbau still gefiltert.
+- **Verdrahtung**: `QuizSessionArgs.errorFocusMode` (+ `sessionMode`-Präfix
+  `errorfocus_`, `==`/`hashCode`), Build-Branch im `QuizSessionController`,
+  `QuizScreen.errorFocusMode`, neuer `errorFocusCountProvider` (autoDispose,
+  nach jeder Session via `_finish` invalidiert).
+- **Tests**: neue `error_focus_builder_test.dart` (errorRate-Ranking, Cap auf
+  10, leerer Pool, beide Richtungen, verbrannte IDs, Härte-Reihenfolge im
+  Build). Alle **91** Tests grün; `flutter analyze` sauber.
+
 ### Security — Iteration 64 (Code-Audit Tranche 4: Backend — App Check + Cloud-Functions-Gerüst)
 - **Firebase App Check** integriert (`firebase_app_check`): In `main.dart` nach
   Firebase-Init aktiviert — Release via Play Integrity, Debug/Emulator via

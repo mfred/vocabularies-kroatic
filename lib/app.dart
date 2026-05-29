@@ -302,6 +302,10 @@ class _LessonOverview extends ConsumerWidget {
               padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
               sliver: SliverToBoxAdapter(child: _DueReviewCard()),
             ),
+            const SliverPadding(
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
+              sliver: SliverToBoxAdapter(child: _ErrorFocusCard()),
+            ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               sliver: SliverList.builder(
@@ -650,6 +654,87 @@ class _DueReviewCard extends ConsumerWidget {
                   ),
                 ),
                 Icon(Icons.play_arrow, color: scheme.secondary, size: 28),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Lektionsübergreifender „Fehlerfokus": ein Tap startet ein 10-Fragen-Quiz
+/// aus den Items mit der höchsten errorRate (siehe [ErrorFocusBuilder]).
+/// Erscheint nur, wenn es überhaupt schwierige Vokabeln gibt.
+class _ErrorFocusCard extends ConsumerWidget {
+  const _ErrorFocusCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final direction = ref.watch(preferredDirectionProvider);
+    final count = ref.watch(errorFocusCountProvider).value ?? 0;
+    // Kein leerer Platzhalter — nur zeigen, wenn etwas zu üben ist.
+    if (count == 0) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Card(
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        color: scheme.errorContainer.withValues(alpha: 0.55),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            width: 1.5,
+            color: scheme.error.withValues(alpha: 0.7),
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => QuizScreen(
+                  lessonId: '__errorfocus__',
+                  lessonTitle: 'Fehlerfokus',
+                  direction: direction,
+                  format: QuizFormat.multipleChoice,
+                  errorFocusMode: true,
+                ),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            child: Row(
+              children: [
+                const Text('🎯', style: TextStyle(fontSize: 32)),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Fehlerfokus',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        count == 1
+                            ? '1 schwierige Vokabel gezielt üben'
+                            : '$count schwierige Vokabeln gezielt üben',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.play_arrow, color: scheme.error, size: 28),
               ],
             ),
           ),

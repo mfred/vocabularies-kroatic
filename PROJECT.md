@@ -4,7 +4,7 @@
 > und Aussprachebewertung. Fokus auf praxistauglichem Reise-Wortschatz.
 > Endprodukt: native Android-App (APK) auf Basis von Flutter.
 
-**Status:** Produktiv — App **v1.0.64**, lauffähige Release-APK, 12 Lektionen mit
+**Status:** Produktiv — App **v1.0.65**, lauffähige Release-APK, 12 Lektionen mit
 ~1.622 Items. Roadmap-Phasen 1–3 weitgehend umgesetzt, zahlreiche Features darüber
 hinaus geliefert (siehe §12). Stand 2026-05-29.
 
@@ -121,10 +121,18 @@ Jedes Item führt einen Fehler-Quotienten:
 errorRate = errors / (errors + successes + 1)
 ```
 
-Der Modus **"Schwierige Vokabeln"** zieht die Top-30 Items nach `errorRate`
-quer über alle Lektionen und mixt sie zu einer eigenen Session.
-Trainingsdauer: 5–10 Minuten. Ziel: gezielte Konsolidierung der
-fehleranfälligsten Stellen.
+Der Modus **"Fehlerfokus"** zieht die härtesten Items nach `errorRate`
+quer über alle Lektionen und mixt sie zu einer eigenen Session. Ziel: gezielte
+Konsolidierung der fehleranfälligsten Stellen.
+
+> **Umsetzungsstand (Iteration 65):** Produktiv als eigener Home-Eintrag
+> „🎯 Fehlerfokus" (erscheint nur, wenn es schwierige Vokabeln gibt). Der
+> `ErrorFocusBuilder` faltet die `errorRate` lektionsübergreifend und
+> **richtungs-agnostisch** aus der `quiz_attempts`-Historie
+> (`AppDatabase.itemErrorStats`) und baut über das geteilte
+> `buildPoolQuestions` eine Session aus den **10 härtesten** Items — nicht
+> „Top-30": die App standardisiert auf 10-Fragen-Sessions, der dedizierte Modus
+> fügt sich dort ein, statt eine Sonderlänge einzuführen.
 
 ---
 
@@ -386,7 +394,7 @@ sequenceDiagram
 ├─────────────────────────────────────────────────────────┤
 │  UI Layer (Material 3)                                  │
 │    ├── Lesson Browser    ├── Training Session           │
-│    └── Error Focus Mode  └── Settings & Stats           │
+│    └── Fehlerfokus       └── Settings & Stats           │
 ├─────────────────────────────────────────────────────────┤
 │  Business Logic                                         │
 │    ├── SM-2 Scheduler    ├── Pronunciation Scorer       │
@@ -618,7 +626,7 @@ Opt-In, nicht im MVP.
            │      └─→ Lesson Detail (Items-Liste, Stage-Status)
            │            └─→ Training Session
            ├──→ Daily Review       ← Heute fällige SR-Items
-           ├──→ Error Focus        ← Top-30 schwierigste Items
+           ├──→ Fehlerfokus        ← 10 schwierigste Items (höchste errorRate)
            └──→ Settings           ← TTS-Speed, Lizenzen, Reset, Daten-Refresh
 ```
 
@@ -744,15 +752,15 @@ flutter build apk --release
 
 ## 12. Roadmap
 
-> **Umsetzungsstand (Iteration 64, 2026-05-29):** Phasen 1–3 sind weitgehend
+> **Umsetzungsstand (Iteration 65, 2026-05-29):** Phasen 1–3 sind weitgehend
 > umgesetzt — MVP, Manifest-Sync/Cache, Drift-Persistenz, Tipp-/Sprech-Quiz,
 > TTS/STT, Aussprache-Score (Levenshtein, Iter 56), SM-2 (Iter 55/59), Dark Mode
 > (Iter 57), Stats/Streak/Reminder. Darüber hinaus geliefert: Cloud-Login &
 > globale Bestenliste, Freunde, **Duell-Modus**, **Quiz des Tages** (mit
 > Modi/Boni), DiceBear-**Avatare** (siehe unten), Quiz-Joker,
-> **Aktivitäts-Heatmap** im Profil (Iter 60). Noch offen u.a.: dedizierter
-> Fehlerfokus-Modus als eigener Eintrag, weitere Stats-Visualisierungen,
-> Englisch als Quellsprache, Web-Build.
+> **Aktivitäts-Heatmap** im Profil (Iter 60), **Fehlerfokus** als eigener
+> Home-Eintrag (Iter 65, §2.4). Noch offen u.a.: weitere
+> Stats-Visualisierungen, Englisch als Quellsprache, Web-Build.
 >
 > Ab **Iteration 61** wird ein ganzheitliches Code-Audit (Performance/Cleanup/
 > Security) umgesetzt — geplante Tranchen: (1) Quick-Wins/Client-Korrektheit,

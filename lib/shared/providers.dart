@@ -20,6 +20,7 @@ import '../features/quiz/models/quiz_direction.dart';
 import '../features/quiz/services/daily_assignment.dart';
 import '../features/quiz/services/daily_quiz_builder.dart';
 import '../features/quiz/services/due_review_builder.dart';
+import '../features/quiz/services/error_focus_builder.dart';
 import '../features/streaks/models/streak_reward.dart';
 import '../features/streaks/services/activity_heatmap.dart';
 import '../features/streaks/services/reminder_service.dart';
@@ -105,6 +106,16 @@ final dueReviewCountProvider =
     direction: direction,
     asOfMs: DateTime.now().millisecondsSinceEpoch,
   );
+});
+
+/// Anzahl der lektionsübergreifend „schwierigen" Items (mind. ein Fehlversuch)
+/// — Grundlage des „Fehlerfokus"-Eintrags. Direction-agnostisch: beide
+/// Richtungen zählen in denselben Pool (vgl. [DueReviewBuilder] ist richtungs-
+/// abhängig, die errorRate dagegen nicht).
+final errorFocusCountProvider = FutureProvider.autoDispose<int>((ref) async {
+  final player = await ref.watch(currentPlayerProvider.future);
+  return ErrorFocusBuilder(ref.watch(databaseProvider))
+      .hardCount(playerId: player.id);
 });
 
 final playerServiceProvider = Provider<PlayerService>((ref) {

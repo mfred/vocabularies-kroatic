@@ -18,6 +18,7 @@ import '../services/answer_evaluator.dart';
 import '../services/daily_assignment.dart';
 import '../services/daily_quiz_builder.dart';
 import '../services/due_review_builder.dart';
+import '../services/error_focus_builder.dart';
 import '../services/quiz_builder.dart';
 
 class QuizSessionArgs {
@@ -28,6 +29,7 @@ class QuizSessionArgs {
     this.reviewMode = false,
     this.dailyMode = false,
     this.dueReviewMode = false,
+    this.errorFocusMode = false,
   });
 
   final String lessonId;
@@ -47,9 +49,14 @@ class QuizSessionArgs {
   /// SM-2-Items (siehe „Fällige Wiederholung").
   final bool dueReviewMode;
 
+  /// Wenn true, kommen die Fragen aus den lektionsübergreifend
+  /// fehleranfälligsten Items (höchste errorRate, siehe „Fehlerfokus").
+  final bool errorFocusMode;
+
   String get sessionMode {
     if (dailyMode) return 'daily_${format.code}_${direction.code}';
     if (dueReviewMode) return 'due_${format.code}_${direction.code}';
+    if (errorFocusMode) return 'errorfocus_${format.code}_${direction.code}';
     return '${format.code}_${direction.code}';
   }
 
@@ -62,11 +69,12 @@ class QuizSessionArgs {
           other.format == format &&
           other.reviewMode == reviewMode &&
           other.dailyMode == dailyMode &&
-          other.dueReviewMode == dueReviewMode;
+          other.dueReviewMode == dueReviewMode &&
+          other.errorFocusMode == errorFocusMode;
 
   @override
-  int get hashCode => Object.hash(
-      lessonId, direction, format, reviewMode, dailyMode, dueReviewMode);
+  int get hashCode => Object.hash(lessonId, direction, format, reviewMode,
+      dailyMode, dueReviewMode, errorFocusMode);
 }
 
 class QuizSessionState {
@@ -224,6 +232,11 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
         playerId: player.id,
         direction: _args.direction,
         asOfMs: DateTime.now().millisecondsSinceEpoch,
+      );
+    } else if (_args.errorFocusMode) {
+      questions = await ErrorFocusBuilder(db).build(
+        playerId: player.id,
+        direction: _args.direction,
       );
     } else {
       final builder = QuizBuilder(db);
@@ -460,6 +473,9 @@ class QuizSessionController extends AsyncNotifier<QuizSessionState> {
     // Fällige-Wiederholung-Zähler neu berechnen — die eben gespielten Items
     // sind jetzt neu terminiert.
     ref.invalidate(dueReviewCountProvider(_args.direction));
+    // Fehlerfokus-Zähler neu berechnen — die eben (hoffentlich richtig)
+    // beantworteten Items verschieben ihre errorRate.
+    ref.invalidate(errorFocusCountProvider);
     // Reward erst NACH der Wertung dieser Session prüfen — sonst würde der
     // Bonus für genau diese Session schon mit eingerechnet.
     ref.invalidate(streakRewardCheckProvider);

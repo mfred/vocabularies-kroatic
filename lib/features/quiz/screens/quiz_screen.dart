@@ -28,6 +28,7 @@ class QuizScreen extends ConsumerStatefulWidget {
     this.reviewMode = false,
     this.dailyMode = false,
     this.dueReviewMode = false,
+    this.errorFocusMode = false,
   });
 
   final String lessonId;
@@ -37,6 +38,7 @@ class QuizScreen extends ConsumerStatefulWidget {
   final bool reviewMode;
   final bool dailyMode;
   final bool dueReviewMode;
+  final bool errorFocusMode;
 
   @override
   ConsumerState<QuizScreen> createState() => _QuizScreenState();
@@ -54,6 +56,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
         reviewMode: widget.reviewMode,
         dailyMode: widget.dailyMode,
         dueReviewMode: widget.dueReviewMode,
+        errorFocusMode: widget.errorFocusMode,
       );
 
   @override

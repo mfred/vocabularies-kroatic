@@ -394,6 +394,47 @@ GROUP BY items.lesson_id
     return out;
   }
 
+  /// Kumulierte Fehl-/Treffer-Zähler pro Item über ALLE Lektionen und beide
+  /// Übersetzungsrichtungen — Grundlage des „Fehlerfokus"-Modus. Nur Items mit
+  /// mindestens einem Fehlversuch erscheinen; absteigend nach
+  /// errorRate = errors / (errors + successes + 1) sortiert (bei Gleichstand:
+  /// mehr Fehler zuerst, dann stabil nach Item-ID).
+  ///
+  /// Direction-agnostisch — wie [wrongItemsForLesson]/[watchLessonProgress]
+  /// zählen beide Richtungen in denselben Pool.
+  Future<List<ItemErrorStat>> itemErrorStats(String playerId) async {
+    final query = customSelect(
+      '''
+SELECT qa.item_id AS item_id,
+       SUM(CASE WHEN qa.was_correct = 0 THEN 1 ELSE 0 END) AS errors,
+       SUM(CASE WHEN qa.was_correct = 1 THEN 1 ELSE 0 END) AS successes
+FROM quiz_attempts qa
+INNER JOIN quiz_sessions qs ON qs.id = qa.session_id
+WHERE qs.player_id = ?1
+GROUP BY qa.item_id
+HAVING errors > 0
+''',
+      variables: [Variable.withString(playerId)],
+      readsFrom: {quizAttempts, quizSessions},
+    );
+    final rows = await query.get();
+    final stats = rows
+        .map((r) => ItemErrorStat(
+              itemId: r.read<String>('item_id'),
+              errors: r.read<int>('errors'),
+              successes: r.read<int>('successes'),
+            ))
+        .toList()
+      ..sort((a, b) {
+        final byRate = b.errorRate.compareTo(a.errorRate);
+        if (byRate != 0) return byRate;
+        final byErrors = b.errors.compareTo(a.errors);
+        if (byErrors != 0) return byErrors;
+        return a.itemId.compareTo(b.itemId);
+      });
+    return stats;
+  }
+
   Future<Set<String>> seenItemIdsForPlayer({
     required String playerId,
     required String mode,
@@ -595,6 +636,24 @@ class DetailedAttemptRow {
 
   final QuizAttempt attempt;
   final Item? item;
+}
+
+/// Kumulierte Antwort-Statistik eines Items für den Fehlerfokus
+/// (siehe [AppDatabase.itemErrorStats]).
+class ItemErrorStat {
+  const ItemErrorStat({
+    required this.itemId,
+    required this.errors,
+    required this.successes,
+  });
+
+  final String itemId;
+  final int errors;
+  final int successes;
+
+  /// errorRate nach PROJECT.md §2.4: `errors / (errors + successes + 1)`.
+  /// Das +1 dämpft Items mit wenig Daten und vermeidet Division durch 0.
+  double get errorRate => errors / (errors + successes + 1);
 }
 
 QueryExecutor _openConnection() {
