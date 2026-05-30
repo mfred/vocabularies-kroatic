@@ -7,6 +7,25 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Added — Iteration 68 (Wortschatz-Reife — neue Stats-Visualisierung im Profil)
+Neue Karte **„🌱 Wortschatz-Reife"** im Profil (direkt unter „Deine Stats") — die
+erste Visualisierung, die zeigt, wie gut die Vokabeln tatsächlich sitzen, statt nur
+Aktivität/Streak/Trefferquote:
+- **Segmentierter Anteilsbalken** Reif / Jung / Am Lernen plus Legende mit Zählern,
+  handgezeichnet im bestehenden Card-Stil (kein Chart-Package). Farben folgen der
+  Reife-Metapher: orange (am Lernen) → hellgrün (jung) → grün (reif).
+- **Einstufung rein über das SM-2-Intervall** der gefalteten `quiz_attempts`-
+  Historie (kein neues Persistenzfeld): **Am Lernen** < 6 Tage, **Jung** 6–20 Tage,
+  **Reif** ≥ 21 Tage — die natürlichen SM-2-Stufen (1 → 6 → ~16 → ~40). Eine
+  fehlerhafte Antwort setzt die Karte zurück → sie fällt sichtbar auf „Am Lernen".
+- **Beide Richtungen** zählen getrennt: jede (Vokabel × Richtung) ist eine eigene
+  Lernkarte. Neuer reiner Helfer `buildVocabMaturity`/`maturityBucketOf`
+  (`lib/features/quiz/services/vocab_maturity.dart`) + `vocabMaturityProvider`
+  (autoDispose, faltet `sm2StatesByItem` über beide Richtungen).
+- **Tests**: neue `test/vocab_maturity_test.dart` (Stufen-Grenzfälle inkl.
+  Intervall genau 21, Fehler-Reset, Verteilungs-Zählung). `flutter analyze` sauber,
+  alle **109** Tests grün (vorher 103).
+
 ### Changed — Iteration 67 (Server-Aggregat-Bestenliste zurückgestellt — Blaze aufgeschoben)
 Der in Iter 66 gebaute `leaderboard_totals`-Lesepfad braucht eine deployte
 Cloud-Function und damit den **Firebase Blaze-Plan (kostenpflichtig)**, der vorerst

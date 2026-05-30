@@ -752,15 +752,16 @@ flutter build apk --release
 
 ## 12. Roadmap
 
-> **Umsetzungsstand (Iteration 67, 2026-05-30):** Phasen 1–3 sind weitgehend
+> **Umsetzungsstand (Iteration 68, 2026-05-30):** Phasen 1–3 sind weitgehend
 > umgesetzt — MVP, Manifest-Sync/Cache, Drift-Persistenz, Tipp-/Sprech-Quiz,
 > TTS/STT, Aussprache-Score (Levenshtein, Iter 56), SM-2 (Iter 55/59), Dark Mode
 > (Iter 57), Stats/Streak/Reminder. Darüber hinaus geliefert: Cloud-Login &
 > globale Bestenliste, Freunde, **Duell-Modus**, **Quiz des Tages** (mit
 > Modi/Boni), DiceBear-**Avatare** (siehe unten), Quiz-Joker,
 > **Aktivitäts-Heatmap** im Profil (Iter 60), **Fehlerfokus** als eigener
-> Home-Eintrag (Iter 65, §2.4). Noch offen u.a.: weitere
-> Stats-Visualisierungen, Englisch als Quellsprache, Web-Build.
+> Home-Eintrag (Iter 65, §2.4), **Wortschatz-Reife** (SM-2-Reife-Verteilung) im
+> Profil (Iter 68). Noch offen u.a.: weitere Stats-Visualisierungen, Englisch als
+> Quellsprache, Web-Build.
 >
 > Ab **Iteration 61** wird ein ganzheitliches Code-Audit (Performance/Cleanup/
 > Security) umgesetzt — geplante Tranchen: (1) Quick-Wins/Client-Korrektheit,

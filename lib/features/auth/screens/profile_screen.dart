@@ -161,6 +161,15 @@ class ProfileScreen extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(16),
                   side: BorderSide(color: scheme.outlineVariant),
                 ),
+                child: const _VocabMaturityTile(),
+              ),
+              const SizedBox(height: 12),
+              Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: scheme.outlineVariant),
+                ),
                 child: _ReminderToggleTile(),
               ),
               const SizedBox(height: 12),
@@ -305,6 +314,195 @@ class _StreakDiagnosticsView extends StatelessWidget {
         children: [
           SizedBox(width: 170, child: Text('$label:', style: mono)),
           Expanded(child: Text(value, style: mono)),
+        ],
+      ),
+    );
+  }
+}
+
+/// „Wortschatz-Reife": segmentierter Balken über die SM-2-Reife-Stufen der
+/// geübten Karten (Am Lernen / Jung / Reif). Reife-Metapher in den Farben:
+/// orange (unreif) → hellgrün (jung) → grün (reif).
+class _VocabMaturityTile extends ConsumerWidget {
+  const _VocabMaturityTile();
+
+  static const _learningColor = Color(0xFFE8A33D); // orange — am Lernen
+  static const _youngColor = Color(0xFF8BC34A); // hellgrün — jung
+  static const _matureColor = Color(0xFF43A047); // grün — reif
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final async = ref.watch(vocabMaturityProvider);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('🌱', style: TextStyle(fontSize: 22)),
+              const SizedBox(width: 10),
+              Text(
+                'Wortschatz-Reife',
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          async.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 6),
+              child: Text('Lade …'),
+            ),
+            error: (e, _) => Text('Fehler: $e'),
+            data: (m) {
+              if (m.isEmpty) {
+                return Text(
+                  'Noch keine geübten Vokabeln — sobald du Quizze spielst, '
+                  'reifen deine Karten hier von „am Lernen" zu „reif".',
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                );
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _MaturityBar(
+                    learning: m.learning,
+                    young: m.young,
+                    mature: m.mature,
+                    learningColor: _learningColor,
+                    youngColor: _youngColor,
+                    matureColor: _matureColor,
+                  ),
+                  const SizedBox(height: 14),
+                  _MaturityLegendRow(
+                    color: _matureColor,
+                    label: 'Reif',
+                    hint: 'sicher gewusst (≥ 21 Tage Intervall)',
+                    count: m.mature,
+                  ),
+                  _MaturityLegendRow(
+                    color: _youngColor,
+                    label: 'Jung',
+                    hint: 'auf gutem Weg',
+                    count: m.young,
+                  ),
+                  _MaturityLegendRow(
+                    color: _learningColor,
+                    label: 'Am Lernen',
+                    hint: 'noch wackelig',
+                    count: m.learning,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${m.total} Lernkarten — je Vokabel und Richtung gezählt.',
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Gestapelter Anteilsbalken: reif → jung → am Lernen (von „fertig" zu „offen").
+/// Leere Segmente werden weggelassen, die äußeren Ecken sind gerundet.
+class _MaturityBar extends StatelessWidget {
+  const _MaturityBar({
+    required this.learning,
+    required this.young,
+    required this.mature,
+    required this.learningColor,
+    required this.youngColor,
+    required this.matureColor,
+  });
+
+  final int learning;
+  final int young;
+  final int mature;
+  final Color learningColor;
+  final Color youngColor;
+  final Color matureColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final segs = <({int count, Color color})>[
+      (count: mature, color: matureColor),
+      (count: young, color: youngColor),
+      (count: learning, color: learningColor),
+    ].where((s) => s.count > 0).toList();
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(7),
+      child: SizedBox(
+        height: 14,
+        child: Row(
+          children: [
+            for (final s in segs)
+              Expanded(flex: s.count, child: ColoredBox(color: s.color)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Legenden-Zeile: Farbtupfer + Label + Kurz-Erklärung + Zähler.
+class _MaturityLegendRow extends StatelessWidget {
+  const _MaturityLegendRow({
+    required this.color,
+    required this.label,
+    required this.hint,
+    required this.count,
+  });
+
+  final Color color;
+  final String label;
+  final String hint;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(3),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            label,
+            style:
+                theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              hint,
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            ),
+          ),
+          Text(
+            '$count',
+            style:
+                theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
         ],
       ),
     );

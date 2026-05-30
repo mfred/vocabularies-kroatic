@@ -21,6 +21,7 @@ import '../features/quiz/services/daily_assignment.dart';
 import '../features/quiz/services/daily_quiz_builder.dart';
 import '../features/quiz/services/due_review_builder.dart';
 import '../features/quiz/services/error_focus_builder.dart';
+import '../features/quiz/services/vocab_maturity.dart';
 import '../features/streaks/models/streak_reward.dart';
 import '../features/streaks/services/activity_heatmap.dart';
 import '../features/streaks/services/reminder_service.dart';
@@ -188,6 +189,20 @@ final activityHeatmapProvider =
   final finished =
       await ref.watch(databaseProvider).finishedAtsForPlayer(player.id);
   return buildActivityHeatmap(finished, DateTime.now());
+});
+
+/// Verteilung der geübten Lernkarten über die SM-2-Reife-Stufen (Am Lernen /
+/// Jung / Reif), gefaltet über beide Übersetzungsrichtungen. Jede (Vokabel,
+/// Richtung) zählt als eigene Karte.
+final vocabMaturityProvider =
+    FutureProvider.autoDispose<VocabMaturity>((ref) async {
+  final player = await ref.watch(currentPlayerProvider.future);
+  final db = ref.watch(databaseProvider);
+  final maps = await Future.wait([
+    for (final dir in QuizDirection.values)
+      db.sm2StatesByItem(playerId: player.id, mode: dir.mode),
+  ]);
+  return buildVocabMaturity(maps.expand((m) => m.values));
 });
 
 /// True, wenn der nächste Quiz-Score durch das 7-Tage-Geschenk verdoppelt
