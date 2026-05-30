@@ -7,6 +7,24 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Changed — Iteration 67 (Server-Aggregat-Bestenliste zurückgestellt — Blaze aufgeschoben)
+Der in Iter 66 gebaute `leaderboard_totals`-Lesepfad braucht eine deployte
+Cloud-Function und damit den **Firebase Blaze-Plan (kostenpflichtig)**, der vorerst
+**nicht** aktiviert wird. Das Feature wandert daher ins **Backlog** — der Code bleibt
+aber erhalten und ist später per Flag-Flip reaktivierbar.
+- **Aggregat-Lesepfad per Default-Flag deaktiviert** (`_useAggregateLeaderboard =
+  false` in `RemoteLeaderboardService`): `top()` geht für alle Ranges direkt in den
+  Roh-Scan → Laufzeit **exakt wie vor Iter 66**, insbesondere **kein** zusätzlicher
+  (leerer/abgelehnter) `leaderboard_totals`-Read mehr pro Ewig-Tab-Aufruf.
+- **Bewusst erhalten** für die spätere Reaktivierung: die Helfer
+  `_topFromTotals`/`mapTotalsDocs`/`aggregateRawScores`, das Ops-Skript
+  `functions/scripts/backfill_leaderboard_totals.js` und die Tests. Das Flag ist
+  `final` (nicht `const`), damit der gegatete Pfad nicht als toter Code gilt —
+  `flutter analyze` bleibt sauber, alle **103** Tests weiter grün.
+- **Reaktivierung** (wenn Blaze später aktiviert wird): Flag auf `true`,
+  `firebase deploy --only functions,firestore:rules`, einmalig das Backfill-Skript
+  (Anleitung in `functions/README.md`).
+
 ### Changed — Iteration 66 (Bestenliste „Ewig" liest Server-Aggregat)
 Der lange offene Audit-Folgeschritt #1 (Befund **M9**, `functions/README.md`) auf
 der **Client-Seite** ist umgesetzt: die „Ewig"-Bestenliste liest jetzt das

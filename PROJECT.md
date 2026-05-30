@@ -752,7 +752,7 @@ flutter build apk --release
 
 ## 12. Roadmap
 
-> **Umsetzungsstand (Iteration 66, 2026-05-30):** Phasen 1–3 sind weitgehend
+> **Umsetzungsstand (Iteration 67, 2026-05-30):** Phasen 1–3 sind weitgehend
 > umgesetzt — MVP, Manifest-Sync/Cache, Drift-Persistenz, Tipp-/Sprech-Quiz,
 > TTS/STT, Aussprache-Score (Levenshtein, Iter 56), SM-2 (Iter 55/59), Dark Mode
 > (Iter 57), Stats/Streak/Reminder. Darüber hinaus geliefert: Cloud-Login &
@@ -766,16 +766,18 @@ flutter build apk --release
 > Security) umgesetzt — geplante Tranchen: (1) Quick-Wins/Client-Korrektheit,
 > (2) Cleanups + Performance, (3) Firestore-Rules härten, (4) Backend (Cloud
 > Functions für server-autoritatives Scoring + App Check). Iter 61–64 lieferten
-> alle vier Tranchen (siehe CHANGELOG). **Iter 66** setzte die Client-Seite von
-> Audit-Folgeschritt #1 (M9) um: die „Ewig"-Bestenliste liest das Aggregat
-> `leaderboard_totals` (O(50)), wenn vorhanden, und fällt sonst still auf den
-> bisherigen Scan zurück — non-breaking auch ohne deployte Function; die
-> Zeitfenster-Buckets (Heute/Woche/Monat) bleiben offen. **Deploy-Hinweise:** Die
-> Firestore-Rules aus Iter 63/64 wirken erst nach `firebase deploy --only
-> firestore:rules`; das Cloud-Functions-Gerüst in `functions/` ist deploybar, aber
-> noch nicht deployt (Blaze-Plan nötig, Anleitung in `functions/README.md` — beim
-> Deploy einmalig `scripts/backfill_leaderboard_totals.js` laufen lassen, damit die
-> Ewig-Liste die Historie behält); App-Check-Enforcement wird separat in der
+> alle vier Tranchen (siehe CHANGELOG). **Iter 66** baute die Client-Seite von
+> Audit-Folgeschritt #1 (M9) — die „Ewig"-Bestenliste liest das Aggregat
+> `leaderboard_totals` (O(50)) statt zu scannen. **Iter 67** stellte das Feature
+> aber ins **Backlog** zurück und schaltete den Aggregat-Lesepfad per Default-Flag
+> (`_useAggregateLeaderboard = false`) ab, weil der nötige Cloud-Functions-Deploy
+> den **Blaze-Plan (kostenpflichtig)** braucht, der vorerst nicht aktiviert wird;
+> die App läuft damit wie vor Iter 66 (reiner Scan). Code, Tests und Backfill-Skript
+> bleiben für eine spätere Reaktivierung erhalten (Flag=true + Deploy + Backfill).
+> **Deploy-Hinweise:** Die Firestore-Rules aus Iter 63/64 wirken erst nach
+> `firebase deploy --only firestore:rules`; das Cloud-Functions-Gerüst in
+> `functions/` ist deploybar, aber noch nicht deployt (Blaze-Plan nötig, Anleitung
+> in `functions/README.md`); App-Check-Enforcement wird separat in der
 > Firebase-Console aktiviert.
 
 ### Phase 1 — MVP (≈ 4 Wochen)
@@ -836,6 +838,12 @@ ist damit erledigt.
 
 ### Phase 5 — Backlog
 
+- Server-Aggregat-Bestenliste (`leaderboard_totals` / Cloud Functions) — braucht
+  Firebase **Blaze** (kostenpflichtig, vorerst nicht aktiviert). Client-Code liegt
+  vor (Iter 66), ist aber per Flag `_useAggregateLeaderboard` deaktiviert (Iter 67);
+  nach `firebase deploy` + Backfill durch Flag=true reaktivierbar. Schließt auch die
+  Zeitfenster-Buckets (Heute/Woche/Monat) und den server-autoritativen Rest des
+  Audits (`winnerUid`, server-seitiges Scoring) ein.
 - Weitere Lektionen (Wetter, Notfall, Geschäft, Hobbys)
 - Englisch als Quellsprache
 - Web-Build (Flutter Web) als zusätzlicher Kanal

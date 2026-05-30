@@ -72,13 +72,18 @@ Damit lässt sich der Iter-66-Client-Pfad ohne Prod-Risiko prüfen:
 
 ## Offene Folgeschritte (bewusst noch NICHT umgesetzt)
 
-1. **Client auf `leaderboard_totals` umstellen** — ✅ **erledigt (Iter 66)**:
-   `RemoteLeaderboardService.top()` liest die „Ewig"-Liste aus `leaderboard_totals`
-   (orderBy `totalScorePoints`, `.limit(50)`) und fällt bei leerem/unlesbarem
-   Aggregat still auf den 2000-Doc-Scan zurück (non-breaking auch ohne Deploy).
-   **Noch offen:** die **Zeitfenster** (heute/Woche/Monat) brauchen zusätzliche
-   Bucket-Docs in `aggregateScore` (z. B. `leaderboard_daily/{yyyymmdd}/{uid}`) —
-   bis dahin scannen diese drei Tabs weiterhin `scores`.
+1. **Client auf `leaderboard_totals` umstellen** — Client-Code liegt vor (Iter 66),
+   ist aber **per Flag deaktiviert und ins Backlog verschoben (Iter 67)**, weil der
+   Functions-Deploy den Blaze-Plan (kostenpflichtig) braucht, der vorerst nicht
+   aktiviert wird. `RemoteLeaderboardService.top()` liest die „Ewig"-Liste aus
+   `leaderboard_totals` (orderBy `totalScorePoints`, `.limit(50)`, Fallback auf den
+   2000-Doc-Scan) **nur, wenn `_useAggregateLeaderboard == true`** — aktuell `false`,
+   die App arbeitet also wie vor Iter 66.
+   **Reaktivierung:** Flag auf `true`, dann `firebase deploy --only
+   functions,firestore:rules` und einmalig das Backfill (s. o.). **Danach noch offen:**
+   die **Zeitfenster** (heute/Woche/Monat) brauchen zusätzliche Bucket-Docs in
+   `aggregateScore` (z. B. `leaderboard_daily/{yyyymmdd}/{uid}`) — bis dahin scannen
+   diese drei Tabs weiterhin `scores`.
 2. **Client hört auf, `winnerUid` zu setzen** (`DuelService.submitOpponentResult`)
    und die `duels`-update-Rule verbietet client-gesetztes `winnerUid` — dann ist
    der Sieger vollständig server-autoritativ.

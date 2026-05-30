@@ -16,6 +16,19 @@ class RemoteLeaderboardService {
   /// hinausgehende wird nicht aggregiert.
   static const int _rawFetchCap = 2000;
 
+  /// Aggregat-Lesepfad (`leaderboard_totals`) — bewusst **AUS**. Aktiviert die
+  /// O(`limit`)-„Ewig"-Liste erst, wenn die `aggregateScore`-Cloud-Function
+  /// deployt ist (Firebase **Blaze**, kostenpflichtig). Vorerst zurückgestellt
+  /// (Backlog, Iter 67), damit ohne Blaze kein zusätzlicher Firestore-Read
+  /// anfällt — die App arbeitet dann exakt wie vor Iter 66 (reiner Scan).
+  ///
+  /// Reaktivieren: hier auf `true` setzen, dann
+  /// `firebase deploy --only functions,firestore:rules` und einmalig
+  /// `functions/scripts/backfill_leaderboard_totals.js` laufen lassen
+  /// (Anleitung in `functions/README.md`). `final` (nicht `const`), damit der
+  /// gegatete Aggregat-Pfad nicht als toter Code gilt.
+  static final bool _useAggregateLeaderboard = false;
+
   CollectionReference<Map<String, dynamic>> get _scores =>
       _firestore.collection('scores');
 
@@ -56,20 +69,22 @@ class RemoteLeaderboardService {
   /// Liefert die Top-`limit` aggregierten Einträge pro Spieler (eine Zeile
   /// je `uid` mit Summe der `scorePoints` und Anzahl Spiele).
   ///
-  /// Für die „Ewig"-Liste wird zuerst das server-gepflegte Aggregat
-  /// `leaderboard_totals` gelesen (O(`limit`) statt bis zu [_rawFetchCap]
-  /// Score-Docs zu scannen — Audit-Befund M9). Ist das Aggregat (noch) leer
-  /// oder nicht lesbar — etwa weil die `aggregateScore`-Cloud-Function bzw. die
-  /// Firestore-Rules noch nicht deployt sind —, fällt die Methode still auf den
-  /// bisherigen Roh-Scan zurück. Der Scan ist immer ein gültiger Pfad, daher
-  /// ist das Schlucken des Lesefehlers unbedenklich (Offline-first). Die
-  /// Zeitfenster (Heute/Woche/Monat) haben noch keine Aggregat-Buckets und
-  /// nutzen weiterhin den Scan.
+  /// Solange [_useAggregateLeaderboard] aktiv ist, wird für die „Ewig"-Liste
+  /// zuerst das server-gepflegte Aggregat `leaderboard_totals` gelesen
+  /// (O(`limit`) statt bis zu [_rawFetchCap] Score-Docs zu scannen — Audit-
+  /// Befund M9). Ist das Aggregat (noch) leer oder nicht lesbar — etwa weil die
+  /// `aggregateScore`-Cloud-Function bzw. die Firestore-Rules noch nicht deployt
+  /// sind —, fällt die Methode still auf den Roh-Scan zurück (immer ein gültiger
+  /// Pfad → Schlucken des Lesefehlers ist unbedenklich, Offline-first).
+  ///
+  /// Das Flag ist derzeit **aus** (Blaze zurückgestellt, Iter 67); dann geht
+  /// `top()` für alle Ranges direkt in den Scan — Verhalten wie vor Iter 66. Die
+  /// Zeitfenster (Heute/Woche/Monat) haben ohnehin keine Aggregat-Buckets.
   Future<List<LeaderboardEntry>> top({
     required LeaderboardRange range,
     int limit = 50,
   }) async {
-    if (range == LeaderboardRange.allTime) {
+    if (_useAggregateLeaderboard && range == LeaderboardRange.allTime) {
       try {
         final fromTotals = await _topFromTotals(limit);
         if (fromTotals.isNotEmpty) return fromTotals;
