@@ -35,6 +35,24 @@ Danach die zugehörige Regel für die Aggregat-Collection mitdeployen
 firebase deploy --only firestore:rules
 ```
 
+### Einmaliges Backfill (Pflichtschritt beim ersten Deploy)
+
+`aggregateScore` triggert nur `onCreate` — nach dem Deploy enthält
+`leaderboard_totals` daher nur **neue** Scores. Damit die „Ewig"-Bestenliste
+nicht auf Post-Deploy-Punkte schrumpft, die bestehende `scores`-Historie einmalig
+nachfüllen. Das Skript schreibt **absolute** Summen via `.set({merge:true})` (kein
+`increment`) und ist damit gefahrlos wiederholbar:
+
+```bash
+cd functions && npm install
+# Auth: GOOGLE_APPLICATION_CREDENTIALS=pfad/zu/serviceAccount.json
+#   (oder `firebase login` + Application Default Credentials)
+node scripts/backfill_leaderboard_totals.js
+```
+
+Reihenfolge: erst `firebase deploy --only functions`, dann das Backfill zuletzt.
+Ein erneuter Lauf ist sicher (überschreibt mit denselben Werten).
+
 ## Lokal testen (Emulator, kein Prod-Risiko)
 
 ```bash
@@ -42,12 +60,25 @@ cd functions && npm install
 firebase emulators:start --only functions,firestore
 ```
 
+Damit lässt sich der Iter-66-Client-Pfad ohne Prod-Risiko prüfen:
+
+1. Ein paar `scores`-Docs seeden → `aggregateScore` füllt `leaderboard_totals`;
+   die App (gegen den Emulator) zeigt im Ewig-Tab dieselben Ränge wie der Scan.
+2. Backfill gegen vorab geseedete Historie laufen lassen
+   (`FIRESTORE_EMULATOR_HOST=localhost:8080 node scripts/backfill_leaderboard_totals.js`)
+   → absolute Summen; ein zweiter Lauf lässt die Werte unverändert (Idempotenz).
+3. Negativpfad: `leaderboard_totals` leer lassen → der Ewig-Tab rendert weiter
+   über den Scan-Fallback.
+
 ## Offene Folgeschritte (bewusst noch NICHT umgesetzt)
 
-1. **Client auf `leaderboard_totals` umstellen**: `RemoteLeaderboardService.top()`
-   für die „Ewig"-Liste auf `leaderboard_totals` (orderBy `totalScorePoints`,
-   `.limit(50)`) umbauen statt 2000 Score-Docs zu scannen. Für die Zeitfenster
-   (heute/Woche/Monat) zusätzliche Bucket-Docs in `aggregateScore` fortschreiben.
+1. **Client auf `leaderboard_totals` umstellen** — ✅ **erledigt (Iter 66)**:
+   `RemoteLeaderboardService.top()` liest die „Ewig"-Liste aus `leaderboard_totals`
+   (orderBy `totalScorePoints`, `.limit(50)`) und fällt bei leerem/unlesbarem
+   Aggregat still auf den 2000-Doc-Scan zurück (non-breaking auch ohne Deploy).
+   **Noch offen:** die **Zeitfenster** (heute/Woche/Monat) brauchen zusätzliche
+   Bucket-Docs in `aggregateScore` (z. B. `leaderboard_daily/{yyyymmdd}/{uid}`) —
+   bis dahin scannen diese drei Tabs weiterhin `scores`.
 2. **Client hört auf, `winnerUid` zu setzen** (`DuelService.submitOpponentResult`)
    und die `duels`-update-Rule verbietet client-gesetztes `winnerUid` — dann ist
    der Sieger vollständig server-autoritativ.

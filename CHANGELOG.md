@@ -7,6 +7,36 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Changed — Iteration 66 (Bestenliste „Ewig" liest Server-Aggregat)
+Der lange offene Audit-Folgeschritt #1 (Befund **M9**, `functions/README.md`) auf
+der **Client-Seite** ist umgesetzt: die „Ewig"-Bestenliste liest jetzt das
+server-gepflegte Aggregat `leaderboard_totals` statt bis zu 2000 `scores`-Docs zu
+scannen — **non-breaking**, ohne neue Dependency, ohne Rules-/Index-Änderung.
+- **Aggregat-Read mit Scan-Fallback** (`RemoteLeaderboardService.top`): für
+  `allTime` wird zuerst `leaderboard_totals` (`orderBy('totalScorePoints', desc)`,
+  `.limit(50)`) gelesen — **O(50)** statt O(2000). Ist das Aggregat **leer** (Cloud-
+  Function `aggregateScore` noch nicht deployt / noch nicht befüllt) **oder nicht
+  lesbar** (permission-denied vor Rules-Deploy, offline), fällt die Methode still
+  auf den bisherigen Roh-Scan zurück. Dadurch verhält sich der Client in **beiden**
+  Deploy-Zuständen korrekt; die Liste wirkt nie leer.
+- **Zeitfenster** (Heute/Woche/Monat) bleiben beim Scan — dafür bräuchte es
+  server-seitige Zeitfenster-Buckets, die bewusst weiter offen sind.
+- **Refactor für Testbarkeit**: `top()` zerlegt in `_topFromTotals`/`_topFromScores`
+  plus zwei **pure, statische** Helfer `aggregateRawScores` (Roh-Scan-Aggregation,
+  1:1 das bisherige Verhalten) und `mapTotalsDocs` (Aggregat-Mapping, sortiert
+  defensiv selbst). Neue `test/remote_leaderboard_aggregation_test.dart` deckt
+  Summierung/Ranking/Tie-Break, übersprungene malformte Docs, `limit`-Schnitt,
+  „erster (jüngster) Name gewinnt" und den leeren-Aggregat-Fallback-Vertrag ab.
+- **Backfill-Ops-Skript** (`functions/scripts/backfill_leaderboard_totals.js`,
+  **nicht** deployter App-Code): füllt `leaderboard_totals` einmalig aus der
+  `scores`-Historie nach, damit die Ewig-Liste beim Deploy nicht auf Post-Deploy-
+  Punkte schrumpft (`aggregateScore` triggert nur `onCreate`). Schreibt **absolute**
+  Summen via `.set({merge:true})` (nicht `increment`) → idempotent/re-runbar.
+  Lauf-Anleitung in `functions/README.md`.
+- **Verifikation hier** (ohne Blaze deploybar): `flutter analyze` sauber, **103**
+  Tests grün (vorher 91, +12 neue). Der Live-Pfad (Function + Backfill) ist per
+  Firestore-Emulator durch den User prüfbar (Schritte in `functions/README.md`).
+
 ### Added — Iteration 65 (Fehlerfokus — eigener Home-Eintrag)
 Der lange als „noch offen" gelistete **dedizierte Fehlerfokus-Modus** (PROJECT.md
 §2.4 / §9.1) ist umgesetzt — als schlanker, lektionsübergreifender Eintrag auf
