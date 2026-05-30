@@ -411,9 +411,12 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
       case QuizFormat.speak:
       case QuizFormat.listenSpeak:
         return QuizMicInput(
+          // Frischer State (Versuchszähler) pro Frage.
+          key: ValueKey('mic-${state.currentIndex}'),
           langTag: question.direction.answerLangTag,
           locked: state.isAnswered,
           lastInput: state.lockedAnswer,
+          expectedAnswer: question.correct,
           onSubmit: (text) => _handleAnswer(text, state),
         );
     }

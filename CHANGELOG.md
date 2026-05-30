@@ -7,6 +7,26 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Changed — Iteration 69 (Sprech-Quiz: 3 Versuche, präsentes Mikrofon, Auflösung bleibt)
+Das Sprech-Quiz (Formate **Sprechen** & **Hören & Sprechen**) wird geduldiger und
+deutlich besser bedienbar:
+- **Drei Sprechversuche pro Frage**: Eine falsch ausgesprochene Antwort wird nicht
+  mehr sofort gewertet. Jeder abgeschlossene Sprech-Durchgang wird lokal mit
+  derselben Logik wie der Controller (tolerant + Aussprache-Fuzzy) bewertet; erst
+  nach **3 Fehlversuchen** gilt die Antwort endgültig als falsch. Eine korrekt
+  ausgesprochene Antwort wird sofort gewertet. Zwischen den Versuchen erscheint
+  ein Hinweis „Noch nicht richtig — Versuch X von 3" (`QuizMicInput`, neuer
+  Parameter `expectedAnswer`; Versuchszähler setzt sich pro Frage über
+  `ValueKey` zurück).
+- **Präsentes Mikrofon**: Statt des kleinen Icons in der Texteingabe-Zeile gibt es
+  jetzt einen großen, runden, zentrierten Mikrofon-Knopf (Ø 116) mit pulsierendem
+  Ring während der Aufnahme — das zentrale Bedienelement des Sprech-Quiz.
+- **Auflösung bleibt stehen**: Bei einer falschen Lösung bleibt die korrekte
+  Antwort sichtbar, bis der Nutzer aktiv auf „Weiter" drückt (kein Auto-Advance bei
+  Fehlern — nur richtige Antworten springen automatisch weiter). Greift nun auch am
+  Ende der drei Sprechversuche.
+- `flutter analyze` sauber.
+
 ### Added — Iteration 68 (Wortschatz-Reife — neue Stats-Visualisierung im Profil)
 Neue Karte **„🌱 Wortschatz-Reife"** im Profil (direkt unter „Deine Stats") — die
 erste Visualisierung, die zeigt, wie gut die Vokabeln tatsächlich sitzen, statt nur

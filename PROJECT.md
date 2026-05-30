@@ -605,6 +605,16 @@ Multiple Choice bleibt strikt (exakte Option-Auswahl).
 
 **Mapping der Scores → SM-2-Quality** siehe §7.3.
 
+**Drei Sprechversuche** (seit **Iteration 69**): Im Sprech-Quiz (`speak` /
+`listenSpeak`) wird ein einzelner Fehlversuch nicht sofort gewertet. `QuizMicInput`
+bewertet jeden abgeschlossenen Sprech-Durchgang lokal (gleiche `AnswerEvaluator`-
+Logik: tolerant + fuzzy) und erlaubt bis zu **3 Versuche**; erst der dritte
+Fehlversuch wird per `onSubmit` endgültig als falsch an den Controller gemeldet
+(eine korrekte Aussprache wird sofort gewertet). Der Mikrofon-Knopf ist ein großer,
+runder, pulsierender Button als zentrales Bedienelement. Bei falscher Endwertung
+bleibt die korrekte Lösung sichtbar, bis der Nutzer „Weiter" drückt (kein
+Auto-Advance bei Fehlern).
+
 ### 8.4 Zukunft (Phase 4+)
 
 Optional Azure Pronunciation Assessment als **Premium-Feature**, weil
